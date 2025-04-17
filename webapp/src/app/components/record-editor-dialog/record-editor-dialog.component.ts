@@ -274,6 +274,9 @@ export class RecordEditorDialogComponent implements OnInit {
     debugInfo: string = '';
     showDebug: boolean = false;
 
+    // Map to store full partner data for selects that use data-partners
+    partnerDataMap: { [selectName: string]: any[] } = {};
+
     // Properties for document number and tags
     documentNumber: string = '';
     tags: string[] = [];
@@ -423,14 +426,22 @@ export class RecordEditorDialogComponent implements OnInit {
 
                         const partners = JSON.parse(decodedJson);
                         if (Array.isArray(partners)) {
+                            // Store full partner data in the component map
+                            const selectName = attributesObj['name'];
+                            if (selectName) {
+                                this.partnerDataMap[selectName] = partners;
+                            }
+
+                            // Generate options with name as value
                             childrenHtml = partners.map(partner => {
-                                const partnerId = partner.id || '';
+                                const partnerId = partner.id || ''; // Keep ID if needed elsewhere, but not for value
                                 const partnerName = partner.name || '';
-                                // Sanitize partnerName before inserting
+                                // Sanitize partnerName for display text and value
                                 const tempDiv = document.createElement('div');
                                 tempDiv.textContent = partnerName;
                                 const sanitizedName = tempDiv.innerHTML;
-                                return `<option value="${this.sanitizer.sanitize(1, partnerId)}">${sanitizedName}</option>`; // Use SecurityContext.HTML for value sanitization potentially
+                                // Use sanitized name for both value and text content
+                                return `<option value="${sanitizedName}">${sanitizedName}</option>`;
                             }).join('');
                         }
                         // Remove the attribute after processing
@@ -445,8 +456,14 @@ export class RecordEditorDialogComponent implements OnInit {
                         this.debugInfo += `\nError parsing data-partners for ${attributesObj['name']}: ${e}`;
                         childrenHtml = ''; // Clear children if parsing fails
                     }
+
+                    // Generate the select tag and the details container div
+                    const selectHtml = `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
+                    const detailsDivHtml = `<div class="partner-details" id="details-${attributesObj['name']}" style="margin-top: -1rem; margin-bottom: 1.5rem; font-size: 0.875rem; color: #6c757d;"></div>`; // Add some basic styling
+                    return selectHtml + detailsDivHtml;
                 }
 
+                // Default return for components not handled above (including selects without data-partners)
                 return `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
             };
 
@@ -461,15 +478,67 @@ export class RecordEditorDialogComponent implements OnInit {
         }
     }
 
+    private updatePartnerDetails(selectElement: HTMLSelectElement): void {
+        const selectedName = selectElement.value;
+        const selectName = selectElement.name;
+        const detailsDivId = `details-${selectName}`;
+        const detailsDiv = this.formContainer.nativeElement.querySelector(`#${detailsDivId}`);
+
+        if (!detailsDiv) {
+            console.warn(`Details container not found for select: ${selectName}`);
+            return;
+        }
+
+        // Clear details if no partner is selected or data is missing
+        if (!selectedName || !this.partnerDataMap[selectName]) {
+            detailsDiv.innerHTML = '';
+            return;
+        }
+
+        const partners = this.partnerDataMap[selectName];
+        const selectedPartner = partners.find(p => p.name === selectedName);
+
+        if (selectedPartner) {
+            // Format details (assuming fields like address, ico, ic_dph exist)
+            let detailsHtml = '';
+            if (selectedPartner.address) {
+                detailsHtml += `<div>${this.sanitizer.sanitize(1, selectedPartner.address)}</div>`;
+            }
+            if (selectedPartner.ico || selectedPartner.ic_dph) {
+                detailsHtml += `<div>`;
+                if (selectedPartner.ico) {
+                    detailsHtml += `IČO: ${this.sanitizer.sanitize(1, selectedPartner.ico)}`;
+                }
+                if (selectedPartner.ico && selectedPartner.ic_dph) {
+                    detailsHtml += `, `;
+                }
+                if (selectedPartner.ic_dph) {
+                    detailsHtml += `IČ DPH: ${this.sanitizer.sanitize(1, selectedPartner.ic_dph)}`;
+                }
+                detailsHtml += `</div>`;
+            }
+
+            // Use bypassSecurityTrustHtml carefully if generated HTML is complex or dynamic
+            // For simple text display, sticking to sanitize might be safer if possible
+            detailsDiv.innerHTML = detailsHtml; // Update the div content
+        } else {
+            detailsDiv.innerHTML = ''; // Clear if partner not found (should not happen ideally)
+        }
+    }
+
     ngOnInit(): void {
         // Initialize dynamic form controls after view is initialized
         setTimeout(() => {
             this.initializeFormControls();
-            // Focus logic can be refined, maybe focus doc number first?
-            const firstInput = this.formContainer.nativeElement.querySelector('input, select, textarea');
-            if (firstInput) {
-                // firstInput.focus();
+            // Trigger initial details update for selects in edit mode
+            if (this.data.mode === 'edit' && this.data.record) {
+                this.updateInitialPartnerDetails();
             }
+
+            // *** DEBUG: Check partnerDataMap content ***
+            console.log('Partner Data Map after init:', JSON.stringify(this.partnerDataMap));
+
+            // Focus logic
             const docNumberInput = document.getElementById('doc-number');
             if (docNumberInput) {
                 docNumberInput.focus();
@@ -499,25 +568,33 @@ export class RecordEditorDialogComponent implements OnInit {
                 return;
             }
 
-            // Initialize control
-            formControls[name] = [this.data.mode === 'edit' && this.data.record?.data[name] ? this.data.record.data[name] : ''];
+            // Initialize control with value from record in edit mode, otherwise empty string
+            const initialValue = (this.data.mode === 'edit' && this.data.record?.data[name])
+                                ? this.data.record.data[name]
+                                : '';
+            formControls[name] = [initialValue];
 
-            // Update form value on input change
+            // Add event listener for input/change
             htmlInput.addEventListener('input', (e) => {
-                const target = e.target as HTMLInputElement;
+                const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
                 let value: string | boolean = target.value;
-                if (target.type === 'checkbox') {
+                if (target.type === 'checkbox' && target instanceof HTMLInputElement) {
                     value = target.checked;
                 }
                 this.recordForm.patchValue({ [name]: value });
+
+                // If it's a select with partner data, update details
+                if (target.tagName === 'SELECT' && this.partnerDataMap[name]) {
+                    this.updatePartnerDetails(target as HTMLSelectElement);
+                }
             });
 
-            // Set initial value for edit mode (redundant due to initialization above, but safe)
+            // Set initial displayed value for edit mode (redundant due to form control init, but good practice)
             if (this.data.mode === 'edit' && this.data.record) {
                 const value = this.data.record.data[name];
-                if (htmlInput.type === 'checkbox') {
-                    (htmlInput as HTMLInputElement).checked = !!value;
-                } else {
+                if (htmlInput.type === 'checkbox' && htmlInput instanceof HTMLInputElement) {
+                    htmlInput.checked = !!value;
+                } else if (htmlInput.tagName !== 'SELECT') { // Don't reset select value here
                     htmlInput.value = value || '';
                 }
             }
@@ -525,10 +602,32 @@ export class RecordEditorDialogComponent implements OnInit {
 
         this.recordForm = this.fb.group(formControls);
 
-        // Initial patch for edit mode (safer)
-        // if (this.data.mode === 'edit' && this.data.record) {
-        //     this.recordForm.patchValue(this.data.record.data);
-        // }
+        // Set initial values for SELECT elements specifically AFTER form group is created
+        // This ensures Angular form control is aware of the value
+        if (this.data.mode === 'edit' && this.data.record) {
+             inputs.forEach((input: Element) => {
+                if (input.tagName === 'SELECT') {
+                    const htmlInput = input as HTMLSelectElement;
+                    const name = htmlInput.getAttribute('name') || htmlInput.id;
+                     if (name && this.data.record?.data[name]) {
+                        htmlInput.value = this.data.record.data[name];
+                    }
+                }
+            });
+        }
+    }
+
+    private updateInitialPartnerDetails(): void {
+        const formContainer = this.formContainer.nativeElement;
+        if (!formContainer) return;
+
+        const selects = formContainer.querySelectorAll('select');
+        selects.forEach((select: HTMLSelectElement) => {
+            const name = select.name;
+            if (name && this.partnerDataMap[name] && select.value) {
+                 this.updatePartnerDetails(select);
+            }
+        });
     }
 
     addTag(): void {

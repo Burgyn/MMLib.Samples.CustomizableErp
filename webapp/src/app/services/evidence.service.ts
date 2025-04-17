@@ -5,6 +5,15 @@ import { map, switchMap } from 'rxjs/operators';
 import { Injectable } from '@angular/core';
 import localforage from 'localforage';
 
+// Define a more detailed interface for partners
+interface PartnerDetails {
+    id: string;
+    name: string;
+    address?: string;
+    ico?: string;
+    ic_dph?: string;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -137,13 +146,37 @@ export class EvidenceService {
 
     // --- Dummy Data for Selectors ---
 
-    getPartners(): Observable<{ id: string; name: string }[]> {
-        // Simulate API call with mock data
-        const mockPartners = [
-            { id: 'p1', name: 'Peter Ucháľ - PETER' },
-            { id: 'p2', name: 'Burgyn s.r.o.' },
-            { id: 'p3', name: 'Dodávateľ XYZ, a.s.' },
-            { id: 'p4', name: 'Iný Partner, s.r.o.' }
+    getPartners(): Observable<PartnerDetails[]> {
+        // Simulate API call with mock data including details
+        const mockPartners: PartnerDetails[] = [
+            {
+                id: 'p1',
+                name: 'Peter Ucháľ - PETER',
+                address: 'Tureň 373, 903 01 Tureň, Slovenská republika',
+                ico: '37522451',
+                ic_dph: 'SK1024607628'
+            },
+            {
+                id: 'p2',
+                name: 'Burgyn s.r.o.',
+                address: 'Hlavná 1, 811 01 Bratislava',
+                ico: '12345678',
+                ic_dph: 'SK12345678'
+            },
+            {
+                id: 'p3',
+                name: 'Dodávateľ XYZ, a.s.',
+                address: 'Priemyselná 5, 010 01 Žilina',
+                ico: '87654321',
+                ic_dph: 'SK87654321'
+            },
+            {
+                id: 'p4',
+                name: 'Iný Partner, s.r.o.',
+                address: 'Námestie Slobody 10, 974 01 Banská Bystrica',
+                ico: '11223344'
+                // ic_dph might be missing for some partners
+            }
         ];
         return of(mockPartners);
     }
