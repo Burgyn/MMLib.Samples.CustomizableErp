@@ -1,4 +1,4 @@
-import { Evidence, EvidenceRecord } from '../models/evidence.model';
+import { Category, Evidence, EvidenceRecord } from '../models/evidence.model';
 import { Observable, from, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 
@@ -11,6 +11,7 @@ import localforage from 'localforage';
 export class EvidenceService {
     private evidenceStore: LocalForage;
     private recordsStore: LocalForage;
+    private categoryStore: LocalForage;
 
     constructor() {
         this.evidenceStore = localforage.createInstance({
@@ -21,6 +22,43 @@ export class EvidenceService {
             name: 'customErp',
             storeName: 'records'
         });
+        this.categoryStore = localforage.createInstance({
+            name: 'customErp',
+            storeName: 'categories'
+        });
+    }
+
+    // Category CRUD operations
+    getAllCategories(): Observable<Category[]> {
+        return from(this.categoryStore.keys()).pipe(
+            switchMap((keys: string[]) =>
+                Promise.all(keys.map(key => this.categoryStore.getItem<Category>(key)))
+            ),
+            map(categories =>
+                categories
+                    .filter((c): c is Category => c !== null)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+            )
+        );
+    }
+
+    getCategory(id: string): Observable<Category | null> {
+        return from(this.categoryStore.getItem<Category>(id));
+    }
+
+    saveCategory(category: Category): Observable<Category> {
+        if (!category.id) {
+            category.id = crypto.randomUUID();
+        }
+        if (!category.createdAt) {
+            category.createdAt = new Date();
+        }
+        category.updatedAt = new Date();
+        return from(this.categoryStore.setItem(category.id, category));
+    }
+
+    deleteCategory(id: string): Observable<void> {
+        return from(this.categoryStore.removeItem(id));
     }
 
     // Evidence CRUD operations
@@ -29,7 +67,21 @@ export class EvidenceService {
             switchMap((keys: string[]) =>
                 Promise.all(keys.map(key => this.evidenceStore.getItem<Evidence>(key)))
             ),
-            map(evidences => evidences.filter((e): e is Evidence => e !== null))
+            map(evidences =>
+                evidences
+                    .filter((e): e is Evidence => e !== null)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+            )
+        );
+    }
+
+    getEvidencesByCategory(categoryId: string): Observable<Evidence[]> {
+        return this.getAllEvidences().pipe(
+            map(evidences =>
+                evidences
+                    .filter(e => e.categoryId === categoryId)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+            )
         );
     }
 

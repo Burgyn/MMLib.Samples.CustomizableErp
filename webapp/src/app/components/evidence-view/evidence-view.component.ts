@@ -17,14 +17,32 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
         <div class="view-container">
             <div class="toolbar">
                 <div class="d-flex justify-content-between align-items-center p-3">
-                    <h4 class="m-0">{{ evidence?.name }}</h4>
+                    <div class="evidence-title">
+                        <h4 class="m-0">{{ evidence?.name }}</h4>
+                        <button class="btn btn-link edit-button" (click)="editEvidence()">
+                            <i class="bi bi-gear"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="toolbar-actions p-2 border-top">
                     <div class="btn-group">
-                        <button class="btn btn-primary btn-sm" (click)="createRecord()">
-                            <i class="bi bi-plus"></i> New Record
+                        <button class="btn btn-primary" (click)="createRecord()">
+                            <i class="bi bi-plus-lg"></i> Nový záznam
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm" (click)="editEvidence()">
-                            <i class="bi bi-pencil"></i> Edit Definition
+                        <button class="btn btn-light" title="Označiť všetko">
+                            <i class="bi bi-check-square"></i>
                         </button>
+                        <button class="btn btn-light" title="Tlačiť">
+                            <i class="bi bi-printer"></i>
+                        </button>
+                        <button class="btn btn-light" title="Export">
+                            <i class="bi bi-download"></i>
+                        </button>
+                    </div>
+                    <div class="flex-grow-1"></div>
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" class="form-control" placeholder="Hľadať...">
                     </div>
                 </div>
             </div>
@@ -45,14 +63,87 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
             display: flex;
             flex-direction: column;
             height: 100vh;
+            background: #fff;
         }
+
         .toolbar {
-            background-color: #f8f9fa;
+            background-color: #fff;
             border-bottom: 1px solid #dee2e6;
         }
+
+        .evidence-title {
+            position: relative;
+            display: inline-block;
+            padding-right: 2rem;
+
+            .edit-button {
+                position: absolute;
+                right: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                padding: 0.25rem;
+                color: #6c757d;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+
+            &:hover .edit-button {
+                opacity: 1;
+            }
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: #f8f9fa;
+        }
+
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        .search-box input {
+            padding-left: 32px;
+        }
+
         .grid-container {
             flex: 1;
             width: 100%;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+        }
+
+        :host ::ng-deep .ag-theme-alpine {
+            --ag-header-height: 40px;
+            --ag-header-foreground-color: #495057;
+            --ag-header-background-color: #f8f9fa;
+            --ag-row-hover-color: #f8f9fa;
+            --ag-selected-row-background-color: #e7f1ff;
+            --ag-font-size: 14px;
+            --ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .btn-group {
+            .btn:not(:first-child) {
+                margin-left: -1px;
+            }
+
+            .btn:not(:last-child) {
+                border-right: 1px solid rgba(0,0,0,0.1);
+            }
         }
     `]
 })
@@ -65,7 +156,11 @@ export class EvidenceViewComponent implements OnInit {
             sortable: true,
             filter: true,
             resizable: true
-        }
+        },
+        rowSelection: 'multiple',
+        suppressRowClickSelection: true,
+        headerHeight: 40,
+        rowHeight: 40
     };
     defaultColDef: ColDef = {
         sortable: true,
@@ -99,7 +194,16 @@ export class EvidenceViewComponent implements OnInit {
     }
 
     private setupGrid(evidence: Evidence): void {
-        this.columnDefs = evidence.gridColumns.map(col => {
+        // Add checkbox column first
+        this.columnDefs = [{
+            headerCheckboxSelection: true,
+            checkboxSelection: true,
+            width: 40,
+            pinned: 'left'
+        }];
+
+        // Add data columns
+        this.columnDefs.push(...evidence.gridColumns.map(col => {
             const colDef: ColDef = {
                 field: `data.${col.field}`,
                 headerName: col.headerName,
@@ -108,7 +212,6 @@ export class EvidenceViewComponent implements OnInit {
                 filter: col.filter
             };
 
-            // Map column types to AG Grid types
             switch (col.type?.toLowerCase()) {
                 case 'number':
                     colDef.type = 'numericColumn';
@@ -132,15 +235,16 @@ export class EvidenceViewComponent implements OnInit {
             }
 
             return colDef;
-        });
+        }));
 
         // Add action column
         this.columnDefs.push({
-            headerName: 'Actions',
+            headerName: 'Akcie',
             field: 'actions',
             width: 100,
             sortable: false,
             filter: false,
+            pinned: 'right',
             cellRenderer: (params: any) => {
                 return `
                     <div class="d-flex gap-2">
@@ -212,7 +316,7 @@ export class EvidenceViewComponent implements OnInit {
     }
 
     deleteRecord(record: EvidenceRecord): void {
-        if (confirm('Are you sure you want to delete this record?')) {
+        if (confirm('Naozaj chcete vymazať tento záznam?')) {
             this.evidenceService.deleteRecord(record.evidenceId, record.id).subscribe(() => {
                 this.loadRecords(record.evidenceId);
             });

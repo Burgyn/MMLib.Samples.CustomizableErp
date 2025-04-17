@@ -1,7 +1,19 @@
+export interface Category {
+    id: string;
+    name: string;
+    icon?: string;
+    order?: number;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 export interface Evidence {
     id: string;
     name: string;
     description?: string;
+    categoryId: string;
+    icon?: string;
+    order?: number;
     formDefinition: string; // GrapesJS JSON
     gridColumns: GridColumn[];
     createdAt: Date;

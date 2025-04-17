@@ -1,7 +1,7 @@
 import { ActivatedRoute, Router } from '@angular/router';
+import { Category, Evidence, GridColumn } from '../../models/evidence.model';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { Editor, Component as GrapesComponent } from 'grapesjs';
-import { Evidence, GridColumn } from '../../models/evidence.model';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { CommonModule } from '@angular/common';
@@ -14,58 +14,85 @@ import grapesjs from 'grapesjs';
     imports: [CommonModule, ReactiveFormsModule],
     template: `
         <div class="editor-container">
-            <div class="toolbar">
-                <form [formGroup]="evidenceForm" class="d-flex gap-3 align-items-center">
-                    <div class="form-group">
+            <div class="toolbar p-3 border-bottom">
+                <form [formGroup]="evidenceForm" class="row g-3">
+                    <div class="col-md-6">
                         <input type="text"
                                class="form-control"
                                formControlName="name"
                                placeholder="Evidence Name">
                     </div>
-                    <div class="form-group">
-                        <input type="text"
-                               class="form-control"
-                               formControlName="description"
-                               placeholder="Description">
+                    <div class="col-md-6">
+                        <select class="form-select"
+                                formControlName="categoryId">
+                            <option value="">Select Category</option>
+                            <option *ngFor="let category of categories"
+                                    [value]="category.id">
+                                {{ category.name }}
+                            </option>
+                        </select>
                     </div>
-                    <button class="btn btn-primary"
-                            (click)="saveEvidence()"
-                            [disabled]="!evidenceForm.valid">
-                        Save Evidence
-                    </button>
+                    <div class="col-12">
+                        <button class="btn btn-primary"
+                                (click)="saveEvidence()"
+                                [disabled]="!evidenceForm.valid">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
                 </form>
             </div>
-            <div id="gjs" class="editor-canvas"></div>
+            <div class="editor-content" id="gjs"></div>
         </div>
     `,
     styles: [`
         .editor-container {
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            height: 100vh;
         }
-        .toolbar {
-            padding: 1rem;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .editor-canvas {
+
+        .editor-content {
             flex: 1;
-            position: relative;
+            overflow: hidden;
         }
-        :host ::ng-deep .gjs-one-bg {
-            background-color: #f8f9fa;
+
+        .toolbar {
+            background: #fff;
         }
-        :host ::ng-deep .gjs-two-color {
-            color: #333;
+
+        :host ::ng-deep {
+            .gjs-one-bg {
+                background-color: #f8f9fa;
+            }
+
+            .gjs-two-color {
+                color: #333;
+            }
+
+            .gjs-cv-canvas {
+                width: 100%;
+                height: 100%;
+                top: 0;
+            }
+
+            .gjs-frame-wrapper {
+                padding: 20px;
+            }
+
+            .gjs-frame {
+                background-color: #fff;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
         }
-    `],
-    encapsulation: ViewEncapsulation.None
+    `]
 })
 export class EvidenceEditorComponent implements OnInit, OnDestroy {
     private editor: Editor | null = null;
     evidenceForm: FormGroup;
     private evidenceId: string | null = null;
+    categories: Category[] = [];
 
     constructor(
         private fb: FormBuilder,
@@ -75,18 +102,17 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
     ) {
         this.evidenceForm = this.fb.group({
             name: ['', Validators.required],
-            description: ['']
+            categoryId: ['', Validators.required]
         });
     }
 
     ngOnInit(): void {
+        this.loadCategories();
         this.initializeEditor();
+
         this.route.params.subscribe(params => {
             if (params['id'] && params['id'] !== 'new') {
-                this.evidenceId = params['id'];
-                if (this.evidenceId) {
-                    this.loadEvidence(this.evidenceId);
-                }
+                this.loadEvidence(params['id']);
             }
         });
     }
@@ -152,6 +178,9 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
             canvas: {
                 styles: [
                     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
+                ],
+                scripts: [
+                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
                 ]
             }
         });
@@ -169,14 +198,25 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                 }
             }
         });
+
+        // Nastavenie paddingu pre canvas
+        this.editor.on('load', () => {
+            const wrapper = this.editor?.getWrapper();
+            if (wrapper) {
+                wrapper.set('style', {
+                    'padding': '2rem'
+                });
+            }
+        });
     }
 
     private loadEvidence(id: string): void {
         this.evidenceService.getEvidence(id).subscribe(evidence => {
             if (evidence) {
+                this.evidenceId = evidence.id;
                 this.evidenceForm.patchValue({
                     name: evidence.name,
-                    description: evidence.description
+                    categoryId: evidence.categoryId
                 });
                 if (this.editor && evidence.formDefinition) {
                     this.editor.loadData(JSON.parse(evidence.formDefinition));
@@ -194,7 +234,7 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
         const evidence: Evidence = {
             id: this.evidenceId || crypto.randomUUID(),
             name: this.evidenceForm.value.name,
-            description: this.evidenceForm.value.description,
+            categoryId: this.evidenceForm.value.categoryId,
             formDefinition,
             gridColumns,
             createdAt: new Date(),
@@ -240,5 +280,11 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
             default:
                 return 'string';
         }
+    }
+
+    private loadCategories(): void {
+        this.evidenceService.getAllCategories().subscribe(categories => {
+            this.categories = categories;
+        });
     }
 }
