@@ -286,8 +286,8 @@ body {
 
 /* General UI elements */
 .gjs-pn-panel, .gjs-pn-views-container, .gjs-pn-options, .gjs-pn-buttons {
-    background-color: var(--light-color, #f8f9fa); /* Use theme variable or default light gray */
-    color: var(--dark-color, #212529); /* Use theme variable or default dark */
+    background-color: var(--light-color, #f8f9fa) !important; /* Use theme variable or default light gray - Added !important */
+    color: var(--dark-color, #212529) !important; /* Use theme variable or default dark - Added !important */
 }
 
 .gjs-pn-btn, .gjs-btn-prim, .gjs-btn-sec {
@@ -301,9 +301,10 @@ body {
 }
 
 .gjs-pn-active, .gjs-pn-btn.gjs-pn-active {
-    background-color: var(--primary-color, #0d6efd) !important;
-    color: #fff !important;
+    background-color: #a8d1ff !important; /* Pre-calculated Lighter primary color (#0d6efd lighten 35%) */
+    color: var(--dark-color, #212529) !important; /* Dark text/icon for contrast */
     box-shadow: none;
+    border-color: #86b7fe !important; /* Slightly darker border, adjusted for light background */
 }
 
 .gjs-field, .gjs-sm-field input, .gjs-sm-field select, .gjs-clm-field input, .gjs-clm-field select {
@@ -337,6 +338,7 @@ body {
 
 /* Specific panel overrides if needed */
 .gjs-pn-views {
+    background-color: var(--light-color, #f8f9fa) !important; /* Ensure this panel background is light */
     border-bottom: 1px solid var(--border-color, #dee2e6);
 }
 
