@@ -459,7 +459,7 @@ export class RecordEditorDialogComponent implements OnInit {
 
                     // Generate the select tag and the details container div
                     const selectHtml = `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
-                    const detailsDivHtml = `<div class="partner-details" id="details-${attributesObj['name']}" style="margin-top: -1rem; margin-bottom: 1.5rem; font-size: 0.875rem; color: #6c757d;"></div>`; // Add some basic styling
+                    const detailsDivHtml = `<div class="partner-details" id="details-${attributesObj['name']}" style="margin-bottom: 1.5rem; font-size: 0.875rem; color: #6c757d;"></div>`;
                     return selectHtml + detailsDivHtml;
                 }
 
