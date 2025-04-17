@@ -138,49 +138,58 @@ export class RecordEditorDialogComponent implements OnInit {
             const frame = definition.pages[0].frames[0];
             this.debugInfo += `\nFrame: ${JSON.stringify(frame, null, 2)}`;
 
-            // Try different ways to get the components
             const components = frame.component?.components || frame.components || [];
             this.debugInfo += `\nComponents: ${JSON.stringify(components, null, 2)}`;
 
-            let html = '';
-            const processComponent = (comp: any) => {
+            const generateHtmlFromComponent = (comp: any): string => {
                 this.debugInfo += `\nProcessing component: ${JSON.stringify(comp, null, 2)}`;
 
-                if (comp.type === 'text' && comp.content) {
+                if (comp.type === 'textnode' && comp.content) {
                     return comp.content;
                 }
 
-                if (comp.tagName === 'input' || comp.tagName === 'select' || comp.tagName === 'textarea') {
-                    const name = comp.attributes?.name || comp.attributes?.id || `field_${Math.random().toString(36).substr(2, 9)}`;
-                    const type = comp.attributes?.type || 'text';
-                    return `<input type="${type}" class="form-control" name="${name}" id="${name}" />`;
+                // Determine the tag name
+                const tagName = comp.tagName || 'div'; // Default to div if tagName is not specified
+
+                // Build attributes string
+                let attributes = '';
+                if (comp.attributes) {
+                    attributes = Object.entries(comp.attributes)
+                        .map(([key, value]) => `${key}="${value}"`)
+                        .join(' ');
                 }
 
-                if (comp.tagName === 'div' && comp.components) {
-                    const label = comp.components.find((c: any) => c.type === 'text')?.content || '';
-                    const input = comp.components.find((c: any) => c.tagName === 'input');
-
-                    if (input) {
-                        const name = input.attributes?.name || input.attributes?.id || `field_${Math.random().toString(36).substr(2, 9)}`;
-                        const type = input.attributes?.type || 'text';
-                        return `
-                            <div class="mb-3">
-                                <label class="form-label">${label}</label>
-                                <input type="${type}" class="form-control" name="${name}" id="${name}" />
-                            </div>`;
+                // Add classes if any
+                let classes = '';
+                if (comp.classes) {
+                    classes = comp.classes.map((c: any) => typeof c === 'string' ? c : c.name).join(' ');
+                    if (classes) {
+                        attributes += ` class="${comp.attributes?.class ? comp.attributes.class + ' ' : ''}${classes}"`;
                     }
                 }
 
-                if (comp.components) {
-                    return comp.components.map((c: any) => processComponent(c)).join('');
+                // Handle void elements (elements that don't need a closing tag)
+                const voidElements = ['input', 'img', 'br', 'hr'];
+                if (voidElements.includes(tagName)) {
+                    return `<${tagName} ${attributes.trim()} />`;
                 }
 
-                return '';
+                // Recursively generate HTML for child components
+                let childrenHtml = '';
+                if (comp.components && Array.isArray(comp.components)) {
+                    childrenHtml = comp.components.map((child: any) => generateHtmlFromComponent(child)).join('');
+                }
+
+                // Add content for non-container elements like label or p
+                let content = '';
+                if (!comp.components && comp.content) {
+                    content = comp.content;
+                }
+
+                return `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
             };
 
-            components.forEach((comp: any) => {
-                html += processComponent(comp);
-            });
+            let html = components.map((comp: any) => generateHtmlFromComponent(comp)).join('');
 
             this.debugInfo += `\nGenerated HTML: ${html}`;
             return html;
