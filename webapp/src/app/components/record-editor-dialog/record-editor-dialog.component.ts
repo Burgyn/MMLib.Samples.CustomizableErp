@@ -145,32 +145,68 @@ export class RecordEditorDialogComponent implements OnInit {
                 this.debugInfo += `\nProcessing component: ${JSON.stringify(comp, null, 2)}`;
 
                 if (comp.type === 'textnode' && comp.content) {
-                    return comp.content;
+                    // Sanitize text content to prevent potential XSS if content can be user-generated in complex ways
+                    const tempDiv = document.createElement('div');
+                    tempDiv.textContent = comp.content;
+                    return tempDiv.innerHTML;
                 }
 
-                // Determine the tag name
-                const tagName = comp.tagName || 'div'; // Default to div if tagName is not specified
+                // Determine the tag name more robustly
+                let tagName = comp.tagName;
+                if (!tagName) {
+                    switch (comp.type) {
+                        case 'label': tagName = 'label'; break;
+                        case 'button': tagName = 'button'; break;
+                        // Map GrapesJS input types to HTML input tag
+                        case 'text-input':
+                        case 'number-input':
+                        case 'date-input':
+                        case 'checkbox': tagName = 'input'; break;
+                        case 'select': tagName = 'select'; break;
+                        case 'textarea': tagName = 'textarea'; break;
+                        default: tagName = 'div'; // Default to div for components like Row, Cell, or unknown types
+                    }
+                }
 
                 // Build attributes string
-                let attributes = '';
-                if (comp.attributes) {
-                    attributes = Object.entries(comp.attributes)
-                        .map(([key, value]) => `${key}="${value}"`)
-                        .join(' ');
+                let attributesObj: { [key: string]: any } = { ...(comp.attributes || {}) };
+
+                // Ensure input elements have a name and type based on GrapesJS component type
+                if (tagName === 'input') {
+                    if (!attributesObj['name']) {
+                        attributesObj['name'] = attributesObj['id'] || `field_${Math.random().toString(36).substr(2, 9)}`;
+                    }
+                    if (!attributesObj['type']) {
+                        switch (comp.type) {
+                            case 'number-input': attributesObj['type'] = 'number'; break;
+                            case 'date-input': attributesObj['type'] = 'date'; break;
+                            case 'checkbox': attributesObj['type'] = 'checkbox'; break;
+                            case 'text-input': // Fallthrough intended
+                            default: attributesObj['type'] = 'text'; break;
+                        }
+                    }
+                } else if (tagName === 'select' || tagName === 'textarea') {
+                    if (!attributesObj['name']) {
+                        attributesObj['name'] = attributesObj['id'] || `field_${Math.random().toString(36).substr(2, 9)}`;
+                    }
                 }
 
                 // Add classes if any
                 let classes = '';
                 if (comp.classes) {
                     classes = comp.classes.map((c: any) => typeof c === 'string' ? c : c.name).join(' ');
-                    if (classes) {
-                        attributes += ` class="${comp.attributes?.class ? comp.attributes.class + ' ' : ''}${classes}"`;
-                    }
                 }
+                if (classes) {
+                    attributesObj['class'] = `${attributesObj['class'] ? attributesObj['class'] + ' ' : ''}${classes}`.trim();
+                }
+
+                let attributes = Object.entries(attributesObj)
+                        .map(([key, value]) => `${key}="${value}"`)
+                        .join(' ');
 
                 // Handle void elements (elements that don't need a closing tag)
                 const voidElements = ['input', 'img', 'br', 'hr'];
-                if (voidElements.includes(tagName)) {
+                if (voidElements.includes(tagName) || comp.void) { // Also respect GrapesJS void property
                     return `<${tagName} ${attributes.trim()} />`;
                 }
 
@@ -180,10 +216,13 @@ export class RecordEditorDialogComponent implements OnInit {
                     childrenHtml = comp.components.map((child: any) => generateHtmlFromComponent(child)).join('');
                 }
 
-                // Add content for non-container elements like label or p
+                // Add content for non-container elements if no children are present
                 let content = '';
-                if (!comp.components && comp.content) {
-                    content = comp.content;
+                if (!childrenHtml && comp.content) {
+                    // Sanitize text content
+                    const tempDiv = document.createElement('div');
+                    tempDiv.textContent = comp.content;
+                    content = tempDiv.innerHTML;
                 }
 
                 return `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
