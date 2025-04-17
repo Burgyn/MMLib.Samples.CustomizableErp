@@ -1,0 +1,42 @@
+/* You can add global styles to this file, and also import other style files */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+@import 'ag-grid-community/styles/ag-grid.css';
+@import 'ag-grid-community/styles/ag-theme-alpine.css';
+@import 'grapesjs/dist/css/grapes.min.css';
+
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* GrapesJS customizations */
+.gjs-one-bg {
+    background-color: #f8f9fa !important;
+}
+
+.gjs-two-color {
+    color: #333 !important;
+}
+
+.gjs-three-bg {
+    background-color: #007bff !important;
+    color: #fff !important;
+}
+
+.gjs-four-color {
+    color: #007bff !important;
+}
+
+/* AG-Grid customizations */
+.ag-theme-alpine {
+    --ag-header-height: 40px;
+    --ag-header-foreground-color: #333;
+    --ag-header-background-color: #f8f9fa;
+    --ag-row-hover-color: #f8f9fa;
+    --ag-selected-row-background-color: #e9ecef;
+}
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
