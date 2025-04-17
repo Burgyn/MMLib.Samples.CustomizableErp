@@ -233,3 +233,113 @@ body {
     }
   }
 }
+
+/* GrapesJS Light Theme Override */
+.gjs-one-bg {
+    background-color: #eee !important; /* Light gray background */
+}
+
+.gjs-one-color {
+    color: #463a3c !important; /* Dark text color */
+}
+
+.gjs-one-color-h:hover {
+    color: #463a3c !important; /* Dark text color on hover */
+}
+
+.gjs-two-bg {
+    background-color: #f8f9fa !important; /* Slightly different light gray for contrast */
+}
+
+.gjs-two-color {
+    color: #333 !important; /* Standard dark text color */
+}
+
+.gjs-two-color-h:hover {
+    color: #000 !important; /* Black text on hover */
+}
+
+.gjs-three-bg {
+    background-color: #fff !important; /* White background, e.g., panels */
+    color: #333 !important; /* Dark text on white */
+}
+
+.gjs-three-color {
+    color: #007bff !important; /* Primary color for accents, e.g., Bootstrap blue */
+}
+
+.gjs-three-color-h:hover {
+    color: #0056b3 !important; /* Darker primary color on hover */
+}
+
+.gjs-four-bg {
+    background-color: #e9ecef !important; /* Another light gray, for things like inputs */
+}
+
+.gjs-four-color {
+    color: #007bff !important; /* Primary color for icons/accents */
+}
+
+.gjs-four-color-h:hover {
+    color: #0056b3 !important; /* Darker primary on hover */
+}
+
+/* General UI elements */
+.gjs-pn-panel, .gjs-pn-views-container, .gjs-pn-options, .gjs-pn-buttons {
+    background-color: var(--light-color, #f8f9fa); /* Use theme variable or default light gray */
+    color: var(--dark-color, #212529); /* Use theme variable or default dark */
+}
+
+.gjs-pn-btn, .gjs-btn-prim, .gjs-btn-sec {
+    color: var(--dark-color, #333);
+    background-color: #fff;
+    border: 1px solid var(--border-color, #dee2e6);
+}
+
+.gjs-pn-btn:hover, .gjs-btn-prim:hover, .gjs-btn-sec:hover {
+    background-color: #e9ecef;
+}
+
+.gjs-pn-active, .gjs-pn-btn.gjs-pn-active {
+    background-color: var(--primary-color, #0d6efd) !important;
+    color: #fff !important;
+    box-shadow: none;
+}
+
+.gjs-field, .gjs-sm-field input, .gjs-sm-field select, .gjs-clm-field input, .gjs-clm-field select {
+    background-color: #fff !important;
+    color: #333 !important;
+    border: 1px solid #ced4da !important;
+}
+
+.gjs-field-color-picker {
+  background-color: #fff !important;
+  border: 1px solid #ced4da !important;
+}
+
+.gjs-sm-label, .gjs-clm-label, .gjs-layer-name, .gjs-title {
+    color: #333 !important;
+}
+
+.gjs-sm-sector .gjs-sm-stack #gjs-sm-add {
+    color: #007bff; /* Use primary color for add buttons */
+}
+
+.gjs-radio-item input:checked + .gjs-radio-item-label {
+  background-color: var(--primary-color, #0d6efd); /* Use primary color for selected radio */
+  color: #fff;
+}
+
+/* Ensure icons are visible */
+.gjs-toolbar .gjs-caret-icon, .gjs-pn-btn .fa {
+    color: inherit !important; /* Inherit color from button */
+}
+
+/* Specific panel overrides if needed */
+.gjs-pn-views {
+    border-bottom: 1px solid var(--border-color, #dee2e6);
+}
+
+.gjs-pn-commands {
+    border-right: 1px solid var(--border-color, #dee2e6);
+}
