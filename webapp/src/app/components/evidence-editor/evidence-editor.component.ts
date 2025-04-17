@@ -7,6 +7,9 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { CommonModule } from '@angular/common';
 import { EvidenceService } from '../../services/evidence.service';
 import grapesjs from 'grapesjs';
+import grapesjsBlocksBasic from 'grapesjs-blocks-basic';
+import grapesjsPluginForms from 'grapesjs-plugin-forms';
+import grapesjsPresetWebpage from 'grapesjs-preset-webpage';
 
 @Component({
     selector: 'app-evidence-editor',
@@ -128,7 +131,11 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
             container: '#gjs',
             height: '100%',
             storageManager: false,
-            plugins: [],
+            plugins: [
+              grapesjsPresetWebpage,
+              grapesjsBlocksBasic,
+              grapesjsPluginForms
+            ],
             blockManager: {
                 blocks: [
                     {
