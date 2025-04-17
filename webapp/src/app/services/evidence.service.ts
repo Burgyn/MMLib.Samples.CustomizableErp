@@ -134,4 +134,27 @@ export class EvidenceService {
     deleteRecord(evidenceId: string, recordId: string): Observable<void> {
         return from(this.recordsStore.removeItem(`${evidenceId}::${recordId}`));
     }
+
+    // --- Dummy Data for Selectors ---
+
+    getPartners(): Observable<{ id: string; name: string }[]> {
+        // Simulate API call with mock data
+        const mockPartners = [
+            { id: 'p1', name: 'Peter Ucháľ - PETER' },
+            { id: 'p2', name: 'Burgyn s.r.o.' },
+            { id: 'p3', name: 'Dodávateľ XYZ, a.s.' },
+            { id: 'p4', name: 'Iný Partner, s.r.o.' }
+        ];
+        return of(mockPartners);
+    }
+
+    getIbans(): Observable<{ id: string; value: string }[]> {
+        // Simulate API call with mock data
+        const mockIbans = [
+            { id: 'iban1', value: 'SK99 0900 0000 0012 3456 7890' },
+            { id: 'iban2', value: 'SK88 0200 0000 0098 7654 3210' },
+            { id: 'iban3', value: 'SK77 1100 0000 0011 2233 4455' }
+        ];
+        return of(mockIbans);
+    }
 }

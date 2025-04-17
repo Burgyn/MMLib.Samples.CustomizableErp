@@ -11,6 +11,10 @@ import grapesjsBlocksBasic from 'grapesjs-blocks-basic';
 import grapesjsPluginForms from 'grapesjs-plugin-forms';
 import grapesjsPresetWebpage from 'grapesjs-preset-webpage';
 
+// Define interfaces for dummy data if not already defined elsewhere
+interface Partner { id: string; name: string; }
+interface Iban { id: string; value: string; }
+
 @Component({
     selector: 'app-evidence-editor',
     standalone: true,
@@ -220,7 +224,98 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                             </label>
                           </div>`,
                          attributes: { 'data-gjs-type': 'radio-input' }
-                    }
+                    },
+                    {
+                        id: 'partner-select-block',
+                        label: 'Partner Selector',
+                        category: 'Economic Fields',
+                        media: '<i class="bi bi-person-lines-fill fs-4"></i>',
+                        content: `<div class="mb-3">
+                            <label class="form-label">Odberateľ</label>
+                            <select class="form-select" data-gjs-type="partner-select"></select>
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'partner-select' }
+                    },
+                    {
+                        id: 'iban-select-block',
+                        label: 'IBAN Selector',
+                        category: 'Economic Fields',
+                        media: '<i class="bi bi-bank fs-4"></i>',
+                        content: `<div class="mb-3">
+                            <label class="form-label">IBAN / Číslo účtu</label>
+                            <select class="form-select" data-gjs-type="iban-select"></select>
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'iban-select' }
+                    },
+                     {
+                        id: 'issue-date-block',
+                        label: 'Dátum vystavenia',
+                        category: 'Economic Fields',
+                        media: '<i class="bi bi-calendar-date fs-4"></i>',
+                        content: `<div class="mb-3">
+                            <label class="form-label">Dátum vystavenia</label>
+                            <input type="date" class="form-control" data-gjs-type="date-input" name="issueDate"/>
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'date-input', 'data-gjs-name': 'issueDate', 'data-gjs-displayName': 'Dátum vystavenia', 'data-gjs-required': true }
+                    },
+                     {
+                        id: 'variable-symbol-block',
+                        label: 'Variabilný symbol',
+                        category: 'Economic Fields',
+                        media: '<i class="bi bi-input-cursor-text fs-4"></i>',
+                        content: `<div class="mb-3">
+                            <label class="form-label">Variabilný symbol</label>
+                            <input type="text" class="form-control" data-gjs-type="text-input" name="variableSymbol"/>
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'text-input', 'data-gjs-name': 'variableSymbol', 'data-gjs-displayName': 'Variabilný symbol', 'data-gjs-required': true }
+                    },
+                    {
+                        id: 'payment-method-block',
+                        label: 'Spôsob úhrady',
+                        category: 'Economic Fields',
+                        media: '<i class="bi bi-cash-coin fs-4"></i>',
+                        content: `<div class="mb-3">
+                            <label class="form-label">Spôsob úhrady</label>
+                            <select class="form-select" data-gjs-type="select" name="paymentMethod">
+                                <option value="cash">Hotovosť</option>
+                                <option value="online">Online platba</option>
+                                <option value="cod">Dobierka</option>
+                            </select>
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'select', 'data-gjs-name': 'paymentMethod', 'data-gjs-displayName': 'Spôsob úhrady', 'data-gjs-required': true }
+                    },
+                    {
+                        id: 'due-date-block',
+                        label: 'Splatnosť',
+                        category: 'Economic Fields',
+                        media: '<i class="bi bi-calendar-check fs-4"></i>',
+                        content: `<div class="mb-3">
+                                    <label class="form-label">Splatnosť</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" placeholder="Dní" data-gjs-type="due-date-days"/>
+                                        <input type="date" class="form-control" data-gjs-type="due-date-date"/>
+                                    </div>
+                                 </div>`,
+                        attributes: { 'data-gjs-type': 'due-date' }
+                    },
+                    {
+                        id: 'currency-rate-block',
+                        label: 'Mena/Kurz',
+                        category: 'Economic Fields',
+                        media: '<i class="bi bi-currency-euro fs-4"></i>',
+                        content: `<div class="mb-3">
+                                    <label class="form-label">Mena / Kurz</label>
+                                    <div class="input-group">
+                                        <select class="form-select" style="flex: 0 0 auto; width: auto;" data-gjs-type="currency-rate-currency">
+                                             <option value="EUR">EUR</option>
+                                             <option value="CZK">CZK</option>
+                                             <option value="USD">USD</option>
+                                        </select>
+                                        <input type="number" class="form-control" value="1.00" step="0.01" data-gjs-type="currency-rate-rate"/>
+                                    </div>
+                                 </div>`,
+                         attributes: { 'data-gjs-type': 'currency-rate' }
+                    },
                 ]
             },
             canvas: {
@@ -452,6 +547,163 @@ body {
                 },
             }
         });
+
+        // New Component Type: partner-select
+        this.editor.DomComponents.addType('partner-select', {
+            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'partner-select',
+            model: {
+                defaults: {
+                    traits: [
+                        { type: 'text', name: 'name', label: 'Field Name (ID)', default: 'partnerId' },
+                        { type: 'text', name: 'displayName', label: 'Display Name', default: 'Odberateľ' },
+                        { type: 'checkbox', name: 'required', label: 'Required' }
+                    ],
+                    script: function() { // Script executed in the canvas iframe
+                        const selectElement = this as unknown as HTMLSelectElement;
+                        const componentId = selectElement.getAttribute('data-gjs-comp-id'); // Custom attribute to link back
+                        // Use postMessage to request data from the Angular component
+                        window.parent.postMessage({ type: 'fetchPartners', componentId: componentId }, '*');
+                    }
+                }
+            },
+             view: { // View logic runs in the editor context
+                 init() {
+                     this.listenTo(this.model, 'change:attributes', this['handleDataResponse']);
+                     // Add a unique ID attribute to the element in the canvas for correlation
+                     const componentId = this.model.getId();
+                     this.model.addAttributes({ 'data-gjs-comp-id': componentId });
+                 },
+                 handleDataResponse(model: GrapesComponent, attributes: any) {
+                    // This check is basic, might need refinement if attributes change often
+                     if (attributes['data-partners']) {
+                         const partners = JSON.parse(attributes['data-partners']);
+                         const selectEl = this.el.querySelector('select');
+                         if (selectEl) {
+                             selectEl.innerHTML = '<option value="">Vyberte partnera...</option>'; // Clear previous
+                             partners.forEach((p: Partner) => {
+                                 const option = document.createElement('option');
+                                 option.value = p.id;
+                                 option.textContent = p.name;
+                                 selectEl.appendChild(option);
+                             });
+                             // Remove the temporary attribute
+                             model.removeAttributes('data-partners');
+                         }
+                     }
+                      if (attributes['data-ibans']) {
+                         const ibans = JSON.parse(attributes['data-ibans']);
+                         const selectEl = this.el.querySelector('select');
+                         if (selectEl) {
+                             selectEl.innerHTML = '<option value="">Vyberte IBAN...</option>'; // Clear previous
+                             ibans.forEach((i: Iban) => {
+                                 const option = document.createElement('option');
+                                 option.value = i.id; // Or i.value?
+                                 option.textContent = i.value;
+                                 selectEl.appendChild(option);
+                             });
+                             model.removeAttributes('data-ibans');
+                         }
+                     }
+                 },
+                 // Need a mechanism to trigger data fetch again if needed
+             }
+        });
+
+         // New Component Type: iban-select (very similar to partner-select)
+        this.editor.DomComponents.addType('iban-select', {
+            extend: 'partner-select', // Inherit model/view from partner-select
+            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'iban-select',
+            model: {
+                defaults: {
+                    // Override default traits if needed
+                    traits: [
+                        { type: 'text', name: 'name', label: 'Field Name (ID)', default: 'ibanId' },
+                        { type: 'text', name: 'displayName', label: 'Display Name', default: 'IBAN' },
+                        { type: 'checkbox', name: 'required', label: 'Required' }
+                    ],
+                     script: function() {
+                        const selectElement = this as unknown as HTMLSelectElement;
+                        const componentId = selectElement.getAttribute('data-gjs-comp-id');
+                        window.parent.postMessage({ type: 'fetchIbans', componentId: componentId }, '*');
+                    }
+                }
+            },
+             view: { // Inherits init and handleDataResponse, might not need changes unless logic differs
+             }
+        });
+
+         // New Component Type: due-date (composite)
+        this.editor.DomComponents.addType('due-date', {
+             isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'due-date',
+             model: {
+                 defaults: {
+                     // Main traits for the composite component
+                     traits: [
+                         { type: 'text', name: 'name', label: 'Field Name (ID)', default: 'dueDateInfo' },
+                         { type: 'text', name: 'displayName', label: 'Display Name', default: 'Splatnosť' },
+                         { type: 'number', name: 'defaultDays', label: 'Default Due Days', default: 14 },
+                         { type: 'checkbox', name: 'required', label: 'Required' }
+                     ],
+                     // Define child components (days input, date input)
+                     // This might require adjusting the content in the block definition
+                     // to use standard GrapesJS components that can be managed here.
+                     // For simplicity now, we rely on the structure defined in the block's content.
+                      // Add script/view logic if interaction (auto-calculation) is needed.
+                 }
+             },
+             view: { // Add view logic for interaction if required later
+             }
+        });
+
+         // New Component Type: currency-rate (composite)
+        this.editor.DomComponents.addType('currency-rate', {
+             isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'currency-rate',
+             model: {
+                 defaults: {
+                     traits: [
+                         { type: 'text', name: 'name', label: 'Field Name (ID)', default: 'currencyRateInfo' },
+                         { type: 'text', name: 'displayName', label: 'Display Name', default: 'Mena/Kurz' },
+                         { type: 'select', name: 'defaultCurrency', label: 'Default Currency', options: [ { id: 'EUR', name: 'EUR' }, { id: 'CZK', name: 'CZK' }, { id: 'USD', name: 'USD' } ], default: 'EUR' },
+                         { type: 'checkbox', name: 'required', label: 'Required' }
+                     ],
+                      // Add script/view logic if interaction (e.g., setting rate based on currency) is needed.
+                 }
+             },
+             view: {
+             }
+        });
+
+        // --- Message Listener for Data Fetching (add this in the component class) ---
+        this.setupiframeMessageListener();
+    }
+
+    // --- Add this method to handle messages from iframe ---
+    private setupiframeMessageListener(): void {
+        window.addEventListener('message', event => {
+            // IMPORTANT: Add origin check for security
+            // if (event.origin !== 'expected_iframe_origin') return;
+
+            const { type, componentId } = event.data;
+
+            if (type === 'fetchPartners' && componentId && this.editor) {
+                this.evidenceService.getPartners().subscribe(partners => {
+                    const component = this.editor?.DomComponents.componentsById[componentId];
+                    if (component) {
+                        // Pass data back via temporary attribute change
+                         component.addAttributes({ 'data-partners': JSON.stringify(partners) });
+                    }
+                });
+            }
+
+            if (type === 'fetchIbans' && componentId && this.editor) {
+                this.evidenceService.getIbans().subscribe(ibans => {
+                    const component = this.editor?.DomComponents.componentsById[componentId];
+                    if (component) {
+                         component.addAttributes({ 'data-ibans': JSON.stringify(ibans) });
+                    }
+                });
+            }
+        });
     }
 
     private loadEvidence(id: string): void {
@@ -493,43 +745,59 @@ body {
     private extractGridColumns(editor: Editor): GridColumn[] {
         const columns: GridColumn[] = [];
         const wrapper = editor.DomComponents.getWrapper();
-
         if (!wrapper) return columns;
 
-        const components = wrapper.find('[data-gjs-type]');
+        // Find components with a defined 'name' trait that has a value
+        const components = wrapper.find('[data-gjs-type]'); // Get all types first
 
         components.forEach((component: GrapesComponent) => {
-            const traits = component.get('traits');
-            const nameTrait = traits?.where({ name: 'name' })[0];
-            const displayNameTrait = traits?.where({ name: 'displayName' })[0];
+            const nameTrait = component.getTrait('name');
             const name = nameTrait?.get('value');
-            if (!name) {
-                return;
+
+            // Only add column if name trait exists and has a non-empty value
+            if (name) {
+                const displayNameTrait = component.getTrait('displayName');
+                const displayName = displayNameTrait?.get('value');
+                const componentTypeAttr = component.getAttributes()['data-gjs-type'] || component.get('type') || 'string';
+
+                // Special handling for composite types if needed
+                let finalType = componentTypeAttr;
+                 if ([ 'partner-select', 'iban-select', 'due-date', 'currency-rate'].includes(finalType)) {
+                    // Decide how to represent composite types in the grid
+                    // For now, treat them as string (displaying the selected value or main identifier)
+                    finalType = 'string';
+                }
+
+                columns.push({
+                    field: name,
+                    headerName: displayName || name.charAt(0).toUpperCase() + name.slice(1),
+                    type: this.getColumnType(finalType), // Pass potentially modified type
+                    sortable: true,
+                    filter: true
+                });
             }
-
-            const displayName = displayNameTrait?.get('value');
-            const componentType = component.getAttributes()['data-gjs-type'] || component.get('type') || 'string';
-
-            columns.push({
-                field: name,
-                headerName: displayName || name.charAt(0).toUpperCase() + name.slice(1),
-                type: this.getColumnType(componentType),
-                sortable: true,
-                filter: true
-            });
         });
 
-        return columns;
+        // Filter out potential duplicates if multiple inner elements have the same name
+        const uniqueColumns = Array.from(new Map(columns.map(col => [col.field, col])).values());
+
+        return uniqueColumns;
     }
 
     private getColumnType(componentType: string): string {
         switch (componentType) {
             case 'number-input':
+            case 'currency-rate-rate': // Example if we targeted inner elements
                 return 'number';
             case 'date-input':
+            case 'due-date-date': // Example if we targeted inner elements
                 return 'date';
             case 'checkbox-input':
                 return 'boolean';
+             // case 'partner-select': // Already handled above, mapping to string
+             // case 'iban-select':
+             // case 'due-date':
+             // case 'currency-rate':
             default:
                 return 'string';
         }
