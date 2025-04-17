@@ -351,6 +351,7 @@ export class RecordEditorDialogComponent implements OnInit {
                         case 'checkbox': tagName = 'input'; break;
                         case 'select': tagName = 'select'; break;
                         case 'textarea': tagName = 'textarea'; break;
+                        case 'option': tagName = 'option'; break;
                         default: tagName = 'div'; // Default to div for components like Row, Cell, or unknown types
                     }
                 }
