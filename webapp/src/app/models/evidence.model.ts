@@ -32,6 +32,8 @@ export interface GridColumn {
 export interface EvidenceRecord {
     id: string;
     evidenceId: string;
+    documentNumber?: string;
+    tags?: string[];
     data: any;
     createdAt: Date;
     updatedAt: Date;
