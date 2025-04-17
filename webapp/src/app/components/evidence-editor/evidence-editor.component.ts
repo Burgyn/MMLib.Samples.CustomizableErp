@@ -141,44 +141,54 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                     {
                         id: 'text-input',
                         label: 'Text Input',
+                        category: 'Form Fields',
                         content: `<div class="mb-3">
                             <label class="form-label">Text Field</label>
                             <input type="text" class="form-control" data-gjs-type="text-input"/>
-                        </div>`
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'text-input' }
                     },
                     {
                         id: 'number-input',
                         label: 'Number Input',
+                        category: 'Form Fields',
                         content: `<div class="mb-3">
                             <label class="form-label">Number Field</label>
                             <input type="number" class="form-control" data-gjs-type="number-input"/>
-                        </div>`
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'number-input' }
                     },
                     {
                         id: 'date-input',
                         label: 'Date Input',
+                        category: 'Form Fields',
                         content: `<div class="mb-3">
                             <label class="form-label">Date Field</label>
                             <input type="date" class="form-control" data-gjs-type="date-input"/>
-                        </div>`
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'date-input' }
                     },
                     {
                         id: 'select',
                         label: 'Select',
+                        category: 'Form Fields',
                         content: `<div class="mb-3">
                             <label class="form-label">Select Field</label>
                             <select class="form-select" data-gjs-type="select">
                                 <option value="">Select an option</option>
                             </select>
-                        </div>`
+                        </div>`,
+                         attributes: { 'data-gjs-type': 'select' }
                     },
                     {
                         id: 'textarea',
                         label: 'Text Area',
+                        category: 'Form Fields',
                         content: `<div class="mb-3">
                             <label class="form-label">Text Area</label>
                             <textarea class="form-control" data-gjs-type="textarea"></textarea>
-                        </div>`
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'textarea' }
                     }
                 ]
             },
@@ -228,15 +238,79 @@ body {
             }
         });
 
-        // Add custom traits for form elements
+        // Manually remove default form blocks from grapesjs-plugin-forms
+        const blockManager = this.editor.BlockManager;
+        const blocksToRemove = ['form', 'input', 'textarea', 'select', 'button', 'label', 'checkbox', 'radio'];
+        blocksToRemove.forEach(blockId => {
+            const block = blockManager.get(blockId);
+            if (block) {
+                blockManager.remove(blockId);
+            }
+        });
+
+        // Define component types and their traits
         this.editor.DomComponents.addType('text-input', {
             isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'text-input',
             model: {
                 defaults: {
                     traits: [
-                        'name',
-                        'placeholder',
-                        'required'
+                        { type: 'text', name: 'name', label: 'Field Name (ID)' },
+                        { type: 'text', name: 'displayName', label: 'Display Name' },
+                        { type: 'text', name: 'placeholder', label: 'Placeholder' },
+                        { type: 'checkbox', name: 'required', label: 'Required' }
+                    ]
+                }
+            }
+        });
+
+        this.editor.DomComponents.addType('number-input', {
+            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'number-input',
+            model: {
+                defaults: {
+                    traits: [
+                        { type: 'text', name: 'name', label: 'Field Name (ID)' },
+                        { type: 'text', name: 'displayName', label: 'Display Name' },
+                        { type: 'checkbox', name: 'required', label: 'Required' }
+                    ]
+                }
+            }
+        });
+
+        this.editor.DomComponents.addType('date-input', {
+            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'date-input',
+            model: {
+                defaults: {
+                    traits: [
+                        { type: 'text', name: 'name', label: 'Field Name (ID)' },
+                        { type: 'text', name: 'displayName', label: 'Display Name' },
+                        { type: 'checkbox', name: 'required', label: 'Required' }
+                    ]
+                }
+            }
+        });
+
+        this.editor.DomComponents.addType('select', {
+            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'select',
+            model: {
+                defaults: {
+                    traits: [
+                        { type: 'text', name: 'name', label: 'Field Name (ID)' },
+                        { type: 'text', name: 'displayName', label: 'Display Name' },
+                        { type: 'checkbox', name: 'required', label: 'Required' }
+                    ]
+                }
+            }
+        });
+
+        this.editor.DomComponents.addType('textarea', {
+            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'textarea',
+            model: {
+                defaults: {
+                    traits: [
+                        { type: 'text', name: 'name', label: 'Field Name (ID)' },
+                        { type: 'text', name: 'displayName', label: 'Display Name' },
+                        { type: 'text', name: 'placeholder', label: 'Placeholder' },
+                        { type: 'checkbox', name: 'required', label: 'Required' }
                     ]
                 }
             }
@@ -285,17 +359,23 @@ body {
 
         if (!wrapper) return columns;
 
-        const components = wrapper.find('input, select, textarea');
+        const components = wrapper.find('[data-gjs-type]');
 
         components.forEach((component: GrapesComponent, index: number) => {
             const traits = component.get('traits');
-            const name = traits?.where({ name: 'name' })[0]?.get('value') || `field_${index}`;
-            const type = component.get('type') || 'string';
+            const nameTrait = traits?.where({ name: 'name' })[0];
+            const displayNameTrait = traits?.where({ name: 'displayName' })[0];
+            const labelTrait = traits?.where({ name: 'label' })[0];
+
+            const name = nameTrait?.get('value') || component.getId() || `field_${index}`;
+            const displayName = displayNameTrait?.get('value');
+            const label = labelTrait?.get('value');
+            const componentType = component.getAttributes()['data-gjs-type'] || component.get('type') || 'string';
 
             columns.push({
                 field: name,
-                headerName: traits?.where({ name: 'label' })[0]?.get('value') || name,
-                type: this.getColumnType(type),
+                headerName: displayName || label || name.charAt(0).toUpperCase() + name.slice(1),
+                type: this.getColumnType(componentType),
                 sortable: true,
                 filter: true
             });
