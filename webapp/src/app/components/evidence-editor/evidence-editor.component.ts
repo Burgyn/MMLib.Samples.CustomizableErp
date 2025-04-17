@@ -184,7 +184,43 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
             },
             canvas: {
                 styles: [
-                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
+                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+                    `
+/* Custom styles for GrapesJS canvas elements */
+body {
+  font-family: Ubuntu, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Noto Sans, Liberation Sans, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", Segoe UI Symbol, "Noto Color Emoji";
+  background-color: #fff;
+  padding: 2rem; /* Add padding directly to the body */
+  color: #212529;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  color: #6c757d; /* Lighter color like in the screenshot */
+  margin-bottom: 0.5rem;
+  font-weight: 500; /* Slightly bolder labels */
+}
+
+.form-control,
+.form-select {
+  border-radius: 0.25rem; /* Slightly less rounded corners */
+  border: 1px solid #dee2e6; /* Standard light gray border */
+  padding: 0.375rem 0.75rem; /* Standard padding */
+  font-size: 1rem;
+  background-color: #fff;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #86b7fe; /* Standard Bootstrap focus color */
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); /* Standard Bootstrap focus shadow */
+}
+
+/* Ensure consistent spacing for dropped components */
+.mb-3 {
+  margin-bottom: 1rem !important;
+}
+`
                 ],
                 scripts: [
                     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
@@ -203,16 +239,6 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                         'required'
                     ]
                 }
-            }
-        });
-
-        // Nastavenie paddingu pre canvas
-        this.editor.on('load', () => {
-            const wrapper = this.editor?.getWrapper();
-            if (wrapper) {
-                wrapper.set('style', {
-                    'padding': '2rem'
-                });
             }
         });
     }

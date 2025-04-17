@@ -62,67 +62,127 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
         </div>
     `,
     styles: [`
+        /* Apply base font to the host */
         :host {
             display: block;
-            /* Ensures the dialog container takes up space */
+            font-family: Ubuntu, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Noto Sans, Liberation Sans, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", Segoe UI Symbol, "Noto Color Emoji";
+        }
+        /* Ensure child elements inherit the host font */
+        .record-editor-dialog,
+        .record-editor-dialog button,
+        .record-editor-dialog input,
+        .record-editor-dialog select,
+        .record-editor-dialog textarea,
+        .record-editor-dialog label,
+        .record-editor-dialog .mat-mdc-dialog-content {
+            font-family: inherit !important; /* Force font inheritance */
         }
         .record-editor-dialog {
-            /* Increased size, adjust as needed */
             min-width: 600px;
-            width: 80vw; /* Use viewport width */
-            background: #f8f9fa; /* Light grey background for the whole dialog */
-            border-radius: 8px;
+            width: 80vw;
+            background: #fff;
+            border-radius: 0.375rem;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Prevent scrollbars on the dialog itself */
-            height: 100%; /* Make the main dialog div fill its container */
+            overflow: hidden;
+            height: 100%;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
         .dialog-header {
-            padding: 20px 20px 0 20px; /* Padding top/sides, no bottom */
-            background: #f8f9fa; /* Ensure header background */
-            flex-shrink: 0; /* Prevent header from shrinking */
+            padding: 1rem 1.5rem;
+            background: #fff;
+            flex-shrink: 0;
+            border-bottom: 1px solid #e9ecef;
         }
-        .dialog-header .form-group-sm .col-form-label {
-            font-size: 0.875rem; /* Smaller labels in header */
-            font-weight: 500;
+        /* More specific label styling - closer to Faktura */
+        .record-editor-dialog .dialog-header .form-label,
+        .record-editor-dialog .content-panel .form-label,
+        .record-editor-dialog .form-fields label {
+            font-size: 0.875rem; /* Consistent label size */
+            font-weight: 500; /* Medium weight */
+            color: #6c757d; /* Grey color */
+            margin-bottom: 0.5rem; /* Standard Bootstrap label margin */
+            display: block;
         }
-        /* Style the Material content area directly */
+        .record-editor-dialog .dialog-header .form-control,
+        .record-editor-dialog .dialog-header .add-tag-input {
+            background-color: #fff;
+            border-radius: 0.25rem;
+            border: 1px solid #ced4da;
+            font-family: inherit; /* Inherit font */
+            font-size: 1rem; /* Standard font size */
+            padding: 0.375rem 0.75rem; /* Standard padding */
+        }
         .mat-mdc-dialog-content {
-            flex-grow: 1; /* Allow content area to grow */
-            overflow-y: auto; /* Enable scrolling for the content area */
-            padding: 20px; /* Padding around the content panel */
-            padding-top: 10px;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background-color: #f8f9fa;
         }
         .form-container {
-            padding: 0; /* Removed padding, now in content-panel */
-            overflow: auto;
-            width: 100%; /* Ensure panel takes full width within parent's padding */
-            box-sizing: border-box; /* Include padding/border in width */
+            padding: 0;
+            overflow: visible;
+            width: 100%;
+            box-sizing: border-box;
         }
         .form-fields {
-            /* Styles removed previously to allow GrapesJS layout */
+            /* Styles for dynamically generated fields */
         }
-        .form-fields input,
-        .form-fields select,
-        .form-fields textarea {
+        /* More specific input/select/textarea styling - closer to Faktura & more airy */
+        .record-editor-dialog .form-fields .form-control,
+        .record-editor-dialog .form-fields input[type="text"],
+        .record-editor-dialog .form-fields input[type="number"],
+        .record-editor-dialog .form-fields input[type="date"],
+        .record-editor-dialog .form-fields input[type="email"],
+        .record-editor-dialog .form-fields select,
+        .record-editor-dialog .form-fields textarea {
             width: 100%;
-            padding: 0.375rem 0.75rem;
-            font-size: 1rem;
+            padding: 0.375rem 0.75rem; /* Standard Bootstrap padding */
+            font-size: 1rem; /* Standard Bootstrap font size */
             font-weight: 400;
             line-height: 1.5;
             color: #212529;
             background-color: #fff;
             border: 1px solid #ced4da;
             border-radius: 0.25rem;
-            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+            margin-bottom: 1.5rem; /* Increased spacing below field */
+            font-family: inherit;
+        }
+        .record-editor-dialog .form-fields .form-control:focus,
+        .record-editor-dialog .form-fields input:focus,
+        .record-editor-dialog .form-fields select:focus,
+        .record-editor-dialog .form-fields textarea:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+            outline: 0;
+        }
+        /* Override GrapesJS block margin if needed, but prefer margin on inputs */
+        .record-editor-dialog .form-fields .mb-3 {
+            /* margin-bottom: 1.5rem !important; */ /* Maybe not needed if inputs have margin */
         }
         .dialog-actions {
-            padding: 15px 20px;
-            border-top: 1px solid #dee2e6;
-            background: #f8f9fa; /* Match header background */
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e9ecef;
+            background: #fff;
             display: flex;
             align-items: center;
-            flex-shrink: 0; /* Prevent footer shrinking */
+            flex-shrink: 0;
+        }
+        .dialog-actions .btn {
+            font-size: 0.875rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.25rem;
+            font-family: inherit; /* Inherit font */
+        }
+        .dialog-actions .btn-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .dialog-actions .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
         }
         .debug-section {
             border-top: 1px solid #dee2e6;
@@ -131,7 +191,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
         }
         .debug-info {
             font-size: 12px;
-            background: #f0f0f0; /* Slightly different debug background */
+            background: #f0f0f0;
             padding: 1rem;
             border-radius: 4px;
             white-space: pre-wrap;
@@ -140,33 +200,35 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
             overflow: auto;
         }
         .content-panel {
-            background-color: #fff; /* White background for the form area */
+            background-color: #fff;
             padding: 1.5rem;
-            border: 1px solid #dee2e6;
+            border: none;
             border-radius: 0.375rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            width: 100%; /* Ensure panel takes full width within parent's padding */
-            box-sizing: border-box; /* Include padding/border in width */
+            box-shadow: none;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 1.5rem;
         }
         .tags-section {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 0.25rem; /* Gap between tags and input */
+            gap: 0.25rem;
         }
         .tag-badge {
             font-size: 0.8em;
             padding: 0.4em 0.6em;
             display: inline-flex;
             align-items: center;
-            background-color: #6c757d; /* Bootstrap secondary */
+            background-color: #6c757d;
             color: white;
+            border-radius: 0.25rem;
         }
         .tag-badge .btn-close {
             margin-left: 0.5em;
             width: 0.5em;
             height: 0.5em;
-            filter: brightness(0) invert(1); /* Make close button white */
+            filter: brightness(0) invert(1);
         }
         .add-tag-wrapper {
             position: relative;
@@ -176,23 +238,27 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
         .add-tag-input {
             min-width: 100px;
             width: auto;
-            padding-right: 30px; /* Space for the button */
+            padding-right: 30px;
             display: inline-block;
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+            height: calc(1.5em + 0.5rem + 2px);
         }
         .add-tag-btn {
             position: absolute;
             right: 3px;
             top: 50%;
             transform: translateY(-50%);
-            height: calc(100% - 6px); /* Adjust height */
+            height: calc(100% - 6px);
             width: 25px;
             padding: 0;
             line-height: 1;
             border: none;
             background: none;
             font-size: 1.2rem;
+            color: #6c757d;
+            cursor: pointer;
         }
-        /* Ensure actions/footer don't shrink */
         .mat-mdc-dialog-actions {
             flex-shrink: 0;
         }
