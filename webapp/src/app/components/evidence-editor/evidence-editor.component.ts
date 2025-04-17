@@ -142,6 +142,7 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                         id: 'text-input',
                         label: 'Text Input',
                         category: 'Form Fields',
+                        media: '<i class="bi bi-input-cursor-text fs-4"></i>',
                         content: `<div class="mb-3">
                             <label class="form-label">Text Field</label>
                             <input type="text" class="form-control" data-gjs-type="text-input"/>
@@ -152,6 +153,7 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                         id: 'number-input',
                         label: 'Number Input',
                         category: 'Form Fields',
+                        media: '<i class="bi bi-hash fs-4"></i>',
                         content: `<div class="mb-3">
                             <label class="form-label">Number Field</label>
                             <input type="number" class="form-control" data-gjs-type="number-input"/>
@@ -162,6 +164,7 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                         id: 'date-input',
                         label: 'Date Input',
                         category: 'Form Fields',
+                        media: '<i class="bi bi-calendar-date fs-4"></i>',
                         content: `<div class="mb-3">
                             <label class="form-label">Date Field</label>
                             <input type="date" class="form-control" data-gjs-type="date-input"/>
@@ -172,6 +175,7 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                         id: 'select',
                         label: 'Select',
                         category: 'Form Fields',
+                        media: '<i class="bi bi-menu-button-wide fs-4"></i>',
                         content: `<div class="mb-3">
                             <label class="form-label">Select Field</label>
                             <select class="form-select" data-gjs-type="select">
@@ -184,11 +188,38 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                         id: 'textarea',
                         label: 'Text Area',
                         category: 'Form Fields',
+                        media: '<i class="bi bi-textarea fs-4"></i>',
                         content: `<div class="mb-3">
                             <label class="form-label">Text Area</label>
                             <textarea class="form-control" data-gjs-type="textarea"></textarea>
                         </div>`,
                         attributes: { 'data-gjs-type': 'textarea' }
+                    },
+                    {
+                        id: 'checkbox-input',
+                        label: 'Checkbox',
+                        category: 'Form Fields',
+                        media: '<i class="bi bi-check-square fs-4"></i>',
+                        content: `<div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" data-gjs-type="checkbox-input">
+                            <label class="form-check-label">
+                                Checkbox Label
+                            </label>
+                          </div>`,
+                         attributes: { 'data-gjs-type': 'checkbox-input' }
+                    },
+                    {
+                        id: 'radio-input',
+                        label: 'Radio Button',
+                        category: 'Form Fields',
+                        media: '<i class="bi bi-ui-radios fs-4"></i>',
+                        content: `<div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" value="" data-gjs-type="radio-input">
+                            <label class="form-check-label">
+                              Radio Label
+                            </label>
+                          </div>`,
+                         attributes: { 'data-gjs-type': 'radio-input' }
                     }
                 ]
             },
@@ -315,6 +346,112 @@ body {
                 }
             }
         });
+
+        this.editor.DomComponents.addType('checkbox-input', {
+            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'checkbox-input',
+            model: {
+                defaults: {
+                    traits: [
+                        { type: 'text', name: 'name', label: 'Field Name (ID)' },
+                        { type: 'text', name: 'displayName', label: 'Display Name' },
+                        { type: 'text', name: 'value', label: 'Checked Value', default: 'true' },
+                        { type: 'text', name: 'label', label: 'Checkbox Label' },
+                        { type: 'checkbox', name: 'required', label: 'Required' },
+                        { type: 'checkbox', name: 'checked', label: 'Checked by default' }
+                    ]
+                }
+            },
+            view: {
+                onRender({ model }: { model: GrapesComponent }) {
+                    const elInput = this.el.querySelector('input');
+                    const labelEl = this.el.querySelector('.form-check-label');
+                    if (labelEl) {
+                        labelEl.textContent = model.getTrait('label')?.get('value') || 'Checkbox Label';
+                    }
+                    if (elInput) elInput.checked = !!model.get('checked');
+                },
+                events: {
+                    'change input[type=checkbox]': 'onChange',
+                } as any,
+                onChange(ev: Event) {
+                    const checked = (ev.target as HTMLInputElement).checked;
+                    this.model.set('checked', checked);
+                },
+                init() {
+                    this.listenTo(this.model.get('traits'), 'change:value', this['handleTraitChange']);
+                },
+                handleTraitChange(trait: any) {
+                    if (trait.get('name') === 'label') {
+                         const labelEl = this.el.querySelector('.form-check-label');
+                         if (labelEl) labelEl.textContent = trait.get('value') || 'Checkbox Label';
+                    }
+                    if (trait.get('name') === 'checked') {
+                         const elInput = this.el.querySelector('input');
+                         if (elInput) elInput.checked = !!trait.get('value');
+                         this.model.set('checked', !!trait.get('value'));
+                    }
+                },
+            }
+        });
+
+        this.editor.DomComponents.addType('radio-input', {
+            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'radio-input',
+            model: {
+                defaults: {
+                    traits: [
+                        { type: 'text', name: 'name', label: 'Group Name (ID)' },
+                        { type: 'text', name: 'displayName', label: 'Display Name' },
+                        { type: 'text', name: 'value', label: 'Value' },
+                        { type: 'text', name: 'label', label: 'Radio Label' },
+                        { type: 'checkbox', name: 'required', label: 'Required' },
+                        { type: 'checkbox', name: 'checked', label: 'Checked by default' }
+                    ]
+                }
+            },
+            view: {
+                onRender({ model }: { model: GrapesComponent }) {
+                    const elInput = this.el.querySelector('input');
+                    const labelEl = this.el.querySelector('.form-check-label');
+                    if (labelEl) {
+                        labelEl.textContent = model.getTrait('label')?.get('value') || 'Radio Label';
+                    }
+                    if (elInput) {
+                         elInput.name = model.getTrait('name')?.get('value') || '';
+                         elInput.checked = !!model.get('checked');
+                    }
+                },
+                events: {
+                    'change input[type=radio]': 'onChange',
+                } as any,
+                onChange(ev: Event) {
+                    const checked = (ev.target as HTMLInputElement).checked;
+                    this.model.set('checked', checked);
+                },
+                init() {
+                    this.listenTo(this.model.get('traits'), 'change:value', this['handleTraitChange']);
+                },
+                handleTraitChange(trait: any) {
+                    const elInput = this.el.querySelector('input');
+                    if (!elInput) return;
+
+                    const traitName = trait.get('name');
+                    const traitValue = trait.get('value');
+
+                    if (traitName === 'label') {
+                        const labelEl = this.el.querySelector('.form-check-label');
+                        if (labelEl) labelEl.textContent = traitValue || 'Radio Label';
+                    }
+                    if (traitName === 'name') {
+                        elInput.name = traitValue || '';
+                        this.model.set('name', traitValue);
+                    }
+                    if (traitName === 'checked') {
+                        elInput.checked = !!traitValue;
+                        this.model.set('checked', !!traitValue);
+                    }
+                },
+            }
+        });
     }
 
     private loadEvidence(id: string): void {
@@ -361,20 +498,21 @@ body {
 
         const components = wrapper.find('[data-gjs-type]');
 
-        components.forEach((component: GrapesComponent, index: number) => {
+        components.forEach((component: GrapesComponent) => {
             const traits = component.get('traits');
             const nameTrait = traits?.where({ name: 'name' })[0];
             const displayNameTrait = traits?.where({ name: 'displayName' })[0];
-            const labelTrait = traits?.where({ name: 'label' })[0];
+            const name = nameTrait?.get('value');
+            if (!name) {
+                return;
+            }
 
-            const name = nameTrait?.get('value') || component.getId() || `field_${index}`;
             const displayName = displayNameTrait?.get('value');
-            const label = labelTrait?.get('value');
             const componentType = component.getAttributes()['data-gjs-type'] || component.get('type') || 'string';
 
             columns.push({
                 field: name,
-                headerName: displayName || label || name.charAt(0).toUpperCase() + name.slice(1),
+                headerName: displayName || name.charAt(0).toUpperCase() + name.slice(1),
                 type: this.getColumnType(componentType),
                 sortable: true,
                 filter: true
@@ -390,6 +528,8 @@ body {
                 return 'number';
             case 'date-input':
                 return 'date';
+            case 'checkbox-input':
+                return 'boolean';
             default:
                 return 'string';
         }
