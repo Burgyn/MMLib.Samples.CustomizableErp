@@ -413,6 +413,40 @@ export class RecordEditorDialogComponent implements OnInit {
                     content = tempDiv.innerHTML;
                 }
 
+                // Handle options from data-partners attribute for select elements
+                if (tagName === 'select' && attributesObj['data-partners'] && typeof attributesObj['data-partners'] === 'string') {
+                    try {
+                        // Basic attempt to decode HTML entities, might need more robust solution
+                        const tempTextarea = document.createElement('textarea');
+                        tempTextarea.innerHTML = attributesObj['data-partners'];
+                        const decodedJson = tempTextarea.value;
+
+                        const partners = JSON.parse(decodedJson);
+                        if (Array.isArray(partners)) {
+                            childrenHtml = partners.map(partner => {
+                                const partnerId = partner.id || '';
+                                const partnerName = partner.name || '';
+                                // Sanitize partnerName before inserting
+                                const tempDiv = document.createElement('div');
+                                tempDiv.textContent = partnerName;
+                                const sanitizedName = tempDiv.innerHTML;
+                                return `<option value="${this.sanitizer.sanitize(1, partnerId)}">${sanitizedName}</option>`; // Use SecurityContext.HTML for value sanitization potentially
+                            }).join('');
+                        }
+                        // Remove the attribute after processing
+                        delete attributesObj['data-partners'];
+                        // Re-generate attributes string
+                        attributes = Object.entries(attributesObj)
+                            .map(([key, value]) => `${key}="${value}"`)
+                            .join(' ');
+
+                    } catch (e) {
+                        console.error(`Error parsing data-partners attribute for ${attributesObj['name'] || 'select'}:`, e, attributesObj['data-partners']);
+                        this.debugInfo += `\nError parsing data-partners for ${attributesObj['name']}: ${e}`;
+                        childrenHtml = ''; // Clear children if parsing fails
+                    }
+                }
+
                 return `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
             };
 
