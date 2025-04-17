@@ -40,7 +40,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
             </div>
 
             <!-- Main Content Panel -->
-            <div mat-dialog-content class="dialog-content p-0">
+            <div mat-dialog-content>
                 <div class="content-panel">
                     <form [formGroup]="recordForm" class="form-container p-0" #formContainer>
                         <div [innerHTML]="formHtml" class="form-fields"></div>
@@ -69,31 +69,35 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
         .record-editor-dialog {
             /* Increased size, adjust as needed */
             min-width: 600px;
-            max-width: 900px;
             width: 80vw; /* Use viewport width */
             background: #f8f9fa; /* Light grey background for the whole dialog */
             border-radius: 8px;
             display: flex;
             flex-direction: column;
-            max-height: 90vh; /* Limit height */
             overflow: hidden; /* Prevent scrollbars on the dialog itself */
+            height: 100%; /* Make the main dialog div fill its container */
         }
         .dialog-header {
             padding: 20px 20px 0 20px; /* Padding top/sides, no bottom */
             background: #f8f9fa; /* Ensure header background */
+            flex-shrink: 0; /* Prevent header from shrinking */
         }
         .dialog-header .form-group-sm .col-form-label {
             font-size: 0.875rem; /* Smaller labels in header */
             font-weight: 500;
         }
-        .dialog-content {
-            flex-grow: 1; /* Allow content to take available space */
-            overflow-y: auto; /* Enable scrolling ONLY for the content panel */
-            padding: 20px; /* Padding around the white panel */
+        /* Style the Material content area directly */
+        .mat-mdc-dialog-content {
+            flex-grow: 1; /* Allow content area to grow */
+            overflow-y: auto; /* Enable scrolling for the content area */
+            padding: 20px; /* Padding around the content panel */
             padding-top: 10px;
         }
         .form-container {
             padding: 0; /* Removed padding, now in content-panel */
+            overflow: auto;
+            width: 100%; /* Ensure panel takes full width within parent's padding */
+            box-sizing: border-box; /* Include padding/border in width */
         }
         .form-fields {
             /* Styles removed previously to allow GrapesJS layout */
@@ -141,8 +145,8 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
             border: 1px solid #dee2e6;
             border-radius: 0.375rem;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            height: 100%; /* Make panel fill the scrollable area */
-            overflow-y: auto; /* Allow scrolling within the panel if needed */
+            width: 100%; /* Ensure panel takes full width within parent's padding */
+            box-sizing: border-box; /* Include padding/border in width */
         }
         .tags-section {
             display: flex;
@@ -187,6 +191,10 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
             border: none;
             background: none;
             font-size: 1.2rem;
+        }
+        /* Ensure actions/footer don't shrink */
+        .mat-mdc-dialog-actions {
+            flex-shrink: 0;
         }
     `]
 })
