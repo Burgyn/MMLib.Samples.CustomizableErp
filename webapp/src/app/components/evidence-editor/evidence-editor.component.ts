@@ -121,17 +121,19 @@ interface Iban { id: string; value: string; }
                 width: 100%;
                 height: 100%;
                 top: 0;
+                padding: 10px;
             }
 
             .gjs-frame-wrapper {
                 padding: 20px;
+                background-color: #f8f9fa;
             }
 
             .gjs-frame {
                 background-color: #fff;
                 border: 1px solid #dee2e6;
-                border-radius: 4px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                border-radius: 6px;
+                box-shadow: 0 3px 6px rgba(0,0,0,0.1);
             }
         }
     `]
@@ -191,6 +193,84 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
               grapesjsBlocksBasic,
               grapesjsPluginForms
             ],
+            // Use custom CSS to control how elements appear in the editor
+            protectedCss: `
+                * {
+                    box-sizing: border-box;
+                }
+                body {
+                    height: auto;
+                    min-height: 100%;
+                    margin: 0;
+                    padding: 30px !important;
+                    background-color: #f8f9fa;
+                    overflow-x: hidden;
+                }
+                .mb-3, .mb-4, div[class^="col-"], .form-group {
+                    margin-bottom: 1rem !important;
+                    padding: 0.5rem !important;
+                }
+                .form-control, .form-select {
+                    padding: 0.4rem 0.6rem !important;
+                    margin: 0.15rem 0 !important;
+                }
+                .gjs-dashed .gjs-selected {
+                    outline: 2px solid #0d6efd !important;
+                    outline-offset: 2px;
+                }
+            `,
+            canvas: {
+                styles: [
+                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+                    `
+/* Custom styles for GrapesJS canvas elements */
+body {
+  font-family: Ubuntu, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Noto Sans, Liberation Sans, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", Segoe UI Symbol, "Noto Color Emoji";
+  background-color: #fff;
+  padding: 30px !important; /* Moderate padding */
+  color: #212529;
+  margin: 0 auto;
+  max-width: 1200px;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  color: #6c757d; /* Lighter color like in the screenshot */
+  margin-bottom: 0.5rem;
+  font-weight: 500; /* Slightly bolder labels */
+}
+
+.form-control,
+.form-select {
+  border-radius: 0.25rem; /* Slightly less rounded corners */
+  border: 1px solid #dee2e6; /* Standard light gray border */
+  padding: 0.375rem 0.75rem; /* Standard padding */
+  font-size: 1rem;
+  background-color: #fff;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #86b7fe; /* Standard Bootstrap focus color */
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); /* Standard Bootstrap focus shadow */
+}
+
+/* Ensure consistent spacing for dropped components */
+.mb-3 {
+  margin-bottom: 1rem !important;
+}
+`
+                ],
+                scripts: [
+                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
+                ]
+            },
+            // Set up custom configuration of the editor
+            fromElement: false,
+            selectorManager: { componentFirst: true },
+            styleManager: { sectors: [] },
+            panels: { defaults: [] },
+            deviceManager: { devices: [] },
             blockManager: {
                 blocks: [
                     {
@@ -373,50 +453,6 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                                  </div>`,
                          attributes: { 'data-gjs-type': 'currency-rate', 'data-gjs-displayName': 'Mena/Kurz' }
                     },
-                ]
-            },
-            canvas: {
-                styles: [
-                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
-                    `
-/* Custom styles for GrapesJS canvas elements */
-body {
-  font-family: Ubuntu, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Noto Sans, Liberation Sans, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", Segoe UI Symbol, "Noto Color Emoji";
-  background-color: #fff;
-  padding: 2rem; /* Add padding directly to the body */
-  color: #212529;
-}
-
-.form-label {
-  font-size: 0.875rem;
-  color: #6c757d; /* Lighter color like in the screenshot */
-  margin-bottom: 0.5rem;
-  font-weight: 500; /* Slightly bolder labels */
-}
-
-.form-control,
-.form-select {
-  border-radius: 0.25rem; /* Slightly less rounded corners */
-  border: 1px solid #dee2e6; /* Standard light gray border */
-  padding: 0.375rem 0.75rem; /* Standard padding */
-  font-size: 1rem;
-  background-color: #fff;
-}
-
-.form-control:focus,
-.form-select:focus {
-  border-color: #86b7fe; /* Standard Bootstrap focus color */
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); /* Standard Bootstrap focus shadow */
-}
-
-/* Ensure consistent spacing for dropped components */
-.mb-3 {
-  margin-bottom: 1rem !important;
-}
-`
-                ],
-                scripts: [
-                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
                 ]
             }
         });
@@ -991,7 +1027,10 @@ body {
         // Add a container for the form
         const formContainer = this.editor.DomComponents.addComponent({
             tagName: 'div',
-            attributes: { class: 'container mt-4' }
+            attributes: {
+                class: 'container',
+                style: 'padding: 1.5rem; margin: 1rem auto; max-width: 95%; background-color: #ffffff;'
+            }
         }) as GrapesComponent;
 
         // Process each component from the AI response
