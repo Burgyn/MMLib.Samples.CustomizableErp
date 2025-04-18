@@ -19,9 +19,14 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
                 <div class="d-flex justify-content-between align-items-center p-3">
                     <div class="evidence-title">
                         <h4 class="m-0">{{ evidence?.name }}</h4>
-                        <button class="btn btn-link edit-button" (click)="editEvidence()">
-                            <i class="bi bi-gear"></i>
-                        </button>
+                        <div class="evidence-actions">
+                            <button class="btn btn-link edit-button" (click)="editEvidence()">
+                                <i class="bi bi-gear"></i>
+                            </button>
+                            <button class="btn btn-link delete-button" (click)="deleteEvidence()">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="toolbar-actions p-2 border-top">
@@ -74,20 +79,28 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
         .evidence-title {
             position: relative;
             display: inline-block;
-            padding-right: 2rem;
+            padding-right: 5rem;
 
-            .edit-button {
+            .evidence-actions {
                 position: absolute;
                 right: 0;
                 top: 50%;
                 transform: translateY(-50%);
-                padding: 0.25rem;
-                color: #6c757d;
+                display: flex;
                 opacity: 0;
                 transition: opacity 0.2s;
             }
 
-            &:hover .edit-button {
+            .edit-button, .delete-button {
+                padding: 0.25rem;
+                color: #6c757d;
+            }
+
+            .delete-button {
+                color: #dc3545;
+            }
+
+            &:hover .evidence-actions {
                 opacity: 1;
             }
         }
@@ -329,7 +342,25 @@ export class EvidenceViewComponent implements OnInit {
         }
     }
 
+    deleteEvidence(): void {
+        if (this.evidence && confirm(`Are you sure you want to delete "${this.evidence.name}"?`)) {
+            this.evidenceService.deleteEvidence(this.evidence.id).subscribe({
+                next: () => {
+                    // Use NavigationEnd event to ensure complete page refresh
+                    this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => {
+                        this.router.navigate(['/']);
+                    });
+                },
+                error: (err) => {
+                    console.error('Error deleting evidence:', err);
+                    alert('Failed to delete evidence. Please try again.');
+                }
+            });
+        }
+    }
+
     onGridReady(params: any): void {
         params.api.sizeColumnsToFit();
     }
 }
+
