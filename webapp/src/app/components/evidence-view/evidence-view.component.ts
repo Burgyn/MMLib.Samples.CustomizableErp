@@ -72,12 +72,12 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background: #fff;
+            background: var(--component-bg);
         }
 
         .toolbar {
-            background-color: #fff;
-            border-bottom: 1px solid #dee2e6;
+            background-color: var(--component-bg);
+            border-bottom: 1px solid var(--border-color);
         }
 
         .evidence-title {
@@ -99,16 +99,16 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
 
             .edit-button, .duplicate-button, .delete-button {
                 padding: 0.25rem;
-                color: #6c757d;
+                color: var(--text-muted);
                 margin-left: 0.25rem;
             }
 
             .duplicate-button {
-                color: #0d6efd;
+                color: var(--primary-color);
             }
 
             .delete-button {
-                color: #dc3545;
+                color: var(--danger-color);
             }
 
             &:hover .evidence-actions {
@@ -120,7 +120,7 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
             display: flex;
             align-items: center;
             gap: 1rem;
-            background: #f8f9fa;
+            background: var(--header-bg);
         }
 
         .search-box {
@@ -133,7 +133,7 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
             left: 10px;
             top: 50%;
             transform: translateY(-50%);
-            color: #6c757d;
+            color: var(--text-muted);
         }
 
         .search-box input {
@@ -152,10 +152,10 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
 
         :host ::ng-deep .ag-theme-alpine {
             --ag-header-height: 40px;
-            --ag-header-foreground-color: #495057;
-            --ag-header-background-color: #f8f9fa;
-            --ag-row-hover-color: #f8f9fa;
-            --ag-selected-row-background-color: #e7f1ff;
+            --ag-header-foreground-color: var(--text-color);
+            --ag-header-background-color: var(--header-bg);
+            --ag-row-hover-color: var(--light-color);
+            --ag-selected-row-background-color: rgba(var(--primary-rgb, 61, 139, 253), 0.2);
             --ag-font-size: 14px;
             --ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }

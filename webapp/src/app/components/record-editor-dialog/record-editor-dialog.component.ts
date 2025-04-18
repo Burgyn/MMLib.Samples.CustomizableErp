@@ -140,54 +140,63 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
         .record-editor-dialog {
             min-width: 600px;
             width: 80vw;
-            background: #fff;
+            background: var(--component-bg);
             border-radius: 0.375rem;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             height: 100%;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--border-color);
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
         .dialog-header {
             padding: 1rem 1.5rem;
-            background: #fff;
+            background: var(--component-bg);
             flex-shrink: 0;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .dialog-header h2 {
+            color: var(--text-color);
+            font-size: 1.5rem;
+            font-weight: 500;
         }
         /* More specific label styling - closer to Faktura */
         .record-editor-dialog .dialog-header .form-label,
         .record-editor-dialog .content-panel .form-label,
-        .record-editor-dialog .form-fields label {
+        .record-editor-dialog .form-fields label,
+        .record-editor-dialog .col-form-label {
             font-size: 0.875rem; /* Consistent label size */
             font-weight: 500; /* Medium weight */
-            color: #6c757d; /* Grey color */
+            color: var(--text-color); /* Use text color instead of muted for better visibility */
             margin-bottom: 0.5rem; /* Standard Bootstrap label margin */
             display: block;
         }
         .record-editor-dialog .dialog-header .form-control,
         .record-editor-dialog .dialog-header .add-tag-input {
-            background-color: #fff;
+            background-color: var(--component-bg);
             border-radius: 0.25rem;
-            border: 1px solid #ced4da;
+            border: 1px solid var(--border-color);
             font-family: inherit; /* Inherit font */
             font-size: 1rem; /* Standard font size */
             padding: 0.375rem 0.75rem; /* Standard padding */
+            color: var(--text-color);
         }
 
         /* Content background and cards */
         .content-background {
-            background-color: #f8f9fa;
+            background-color: var(--app-bg);
             flex-grow: 1;
             overflow-y: auto;
             padding: 1.5rem;
+            color: var(--text-color);
         }
 
         .content-card {
-            background-color: #fff;
+            background-color: var(--component-bg);
             border-radius: 0.5rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             overflow: hidden;
+            border: 1px solid var(--border-color);
         }
 
         .form-container {
@@ -212,9 +221,9 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
             font-size: 1rem; /* Standard Bootstrap font size */
             font-weight: 400;
             line-height: 1.5;
-            color: #212529;
-            background-color: #fff;
-            border: 1px solid #ced4da;
+            color: var(--text-color);
+            background-color: var(--component-bg);
+            border: 1px solid var(--border-color);
             border-radius: 0.25rem;
             transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
             margin-bottom: 1.5rem; /* Increased spacing below field */
@@ -224,8 +233,8 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
         .record-editor-dialog .form-fields input:focus,
         .record-editor-dialog .form-fields select:focus,
         .record-editor-dialog .form-fields textarea:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.25);
             outline: 0;
         }
         /* Grid layout styling for rendering GrapesJS rows and cells */
@@ -268,8 +277,8 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
         }
         .dialog-actions {
             padding: 1rem 1.5rem;
-            border-top: 1px solid #e9ecef;
-            background: #fff;
+            border-top: 1px solid var(--border-color);
+            background: var(--component-bg);
             display: flex;
             align-items: center;
             flex-shrink: 0;
@@ -281,76 +290,104 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
             font-family: inherit; /* Inherit font */
         }
         .dialog-actions .btn-primary {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
         }
         .dialog-actions .btn-secondary {
-            background-color: #6c757d;
-            border-color: #6c757d;
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
         }
         .debug-section {
-            border-top: 1px solid #dee2e6;
+            border-top: 1px solid var(--border-color);
             padding-top: 1rem;
             margin-top: 1.5rem;
         }
         .debug-info {
             font-size: 12px;
-            background: #f0f0f0;
+            background: var(--light-color);
             padding: 1rem;
             border-radius: 4px;
             white-space: pre-wrap;
             word-break: break-word;
             max-height: 300px;
             overflow: auto;
+            color: var(--text-color);
         }
 
         /* Panel styling for subitems */
         .subitems-panel {
             display: flex;
             flex-direction: column;
+            background-color: var(--component-bg);
         }
 
         .panel-header {
             padding: 0.75rem 1rem 0;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--component-bg);
         }
 
         .panel-body {
             flex: 1;
+            background-color: var(--component-bg);
+        }
+
+        .tab-content {
+            background-color: var(--component-bg);
+        }
+
+        .tab-pane {
+            background-color: var(--component-bg);
         }
 
         .nav-tabs {
             border-bottom: none;
+            background-color: var(--component-bg);
         }
 
         .nav-tabs .nav-link {
             border: none;
             border-bottom: 2px solid transparent;
             border-radius: 0;
-            color: #495057;
+            color: var(--text-color);
             padding: 0.5rem 1rem;
             margin-right: 0.5rem;
             font-weight: 500;
         }
 
         .nav-tabs .nav-link.active {
-            color: #0d6efd;
+            color: var(--primary-color);
             background-color: transparent;
-            border-bottom: 2px solid #0d6efd;
+            border-bottom: 2px solid var(--primary-color);
         }
 
         .subitem-grid {
             width: 100%;
             min-height: 150px;
+            color: var(--text-color);
+        }
+
+        .tab-pane .p-3 {
+            background-color: var(--component-bg);
+            color: var(--text-color);
+        }
+
+        /* Fix focus state of inputs inside the dialog */
+        .record-editor-dialog input:focus,
+        .record-editor-dialog select:focus,
+        .record-editor-dialog textarea:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.25);
+            outline: 0;
         }
 
         .ag-theme-alpine {
             --ag-header-height: 40px;
-            --ag-header-foreground-color: #495057;
-            --ag-header-background-color: #f8f9fa;
-            --ag-odd-row-background-color: #fff;
-            --ag-row-hover-color: #f8f9fa;
-            --ag-selected-row-background-color: #e7f1ff;
+            --ag-header-foreground-color: var(--text-color);
+            --ag-header-background-color: var(--header-bg);
+            --ag-odd-row-background-color: var(--component-bg);
+            --ag-row-hover-color: var(--light-color);
+            --ag-selected-row-background-color: rgba(var(--primary-rgb, 61, 139, 253), 0.2);
             --ag-font-size: 14px;
             --ag-font-family: inherit;
         }
@@ -408,7 +445,7 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
             border: none;
             background: none;
             font-size: 1.2rem;
-            color: #6c757d;
+            color: var(--text-muted);
             cursor: pointer;
         }
         .tag-suggestions {
@@ -418,8 +455,8 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
             width: 100%;
             max-height: 150px;
             overflow-y: auto;
-            background-color: white;
-            border: 1px solid #ced4da;
+            background-color: var(--component-bg);
+            border: 1px solid var(--border-color);
             border-radius: 0.25rem;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             z-index: 1050;
@@ -427,13 +464,13 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
         .tag-suggestion-item {
             padding: 0.35rem 0.6rem;
             cursor: pointer;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid var(--border-color);
         }
         .tag-suggestion-item:last-child {
             border-bottom: none;
         }
         .tag-suggestion-item:hover {
-            background-color: rgba(0,0,0,0.05);
+            background-color: var(--light-color);
         }
         .mat-mdc-dialog-actions {
             flex-shrink: 0;
@@ -443,14 +480,15 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
         .partner-details {
             margin-bottom: 1rem !important;
             font-size: 0.875rem;
-            color: #6c757d;
+            color: var(--text-muted);
         }
         .partner-details-content {
             padding: 0.5rem;
-            border: 1px solid #e9ecef;
+            border: 1px solid var(--border-color);
             border-radius: 0.25rem;
-            background-color: #f8f9fa;
+            background-color: var(--app-bg);
             margin-top: 0.25rem;
+            color: var(--text-color);
         }
         .detail-line {
             margin-bottom: 0.25rem;
@@ -464,6 +502,95 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
         }
         .detail-item:last-child {
             margin-right: 0;
+        }
+
+        /* Form controls in dark theme */
+        body.dark-theme,
+        body.dark-blue-theme,
+        body.dark-purple-theme,
+        body.dark-green-theme,
+        body.dark-orange-theme,
+        body.soft-dark-theme {
+            .record-editor-dialog input,
+            .record-editor-dialog select,
+            .record-editor-dialog textarea {
+                background-color: var(--component-bg);
+                color: var(--text-color);
+                border-color: var(--border-color);
+            }
+
+            .record-editor-dialog .form-control:focus,
+            .record-editor-dialog input:focus,
+            .record-editor-dialog select:focus,
+            .record-editor-dialog textarea:focus {
+                border-color: var(--primary-color);
+                box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.25);
+            }
+
+            /* Table headers and cells */
+            .record-editor-dialog .ag-header {
+                background-color: var(--header-bg);
+                color: var(--text-color);
+            }
+
+            .record-editor-dialog .ag-row {
+                background-color: var(--component-bg);
+                color: var(--text-color);
+            }
+
+            .record-editor-dialog .ag-row:hover {
+                background-color: var(--light-color);
+            }
+
+            /* Tab navigation */
+            .record-editor-dialog .nav-tabs .nav-link {
+                color: var(--text-color);
+            }
+
+            .record-editor-dialog .nav-tabs .nav-link:hover {
+                color: var(--primary-color);
+            }
+
+            .record-editor-dialog .nav-tabs .nav-link.active {
+                color: var(--primary-color);
+                border-bottom-color: var(--primary-color);
+            }
+
+            /* Buttons */
+            .record-editor-dialog .btn-outline-primary {
+                color: var(--primary-color);
+                border-color: var(--primary-color);
+            }
+
+            .record-editor-dialog .btn-outline-primary:hover {
+                background-color: var(--primary-color);
+                color: #fff;
+            }
+
+            .record-editor-dialog .btn-outline-secondary {
+                color: var(--secondary-color);
+                border-color: var(--secondary-color);
+            }
+
+            .record-editor-dialog .btn-outline-secondary:hover {
+                background-color: var(--secondary-color);
+                color: #fff;
+            }
+
+            .record-editor-dialog .btn-outline-danger {
+                color: var(--danger-color);
+                border-color: var(--danger-color);
+            }
+
+            .record-editor-dialog .btn-outline-danger:hover {
+                background-color: var(--danger-color);
+                color: #fff;
+            }
+        }
+
+        .record-editor-dialog .mb-3 label.col-sm-2.col-form-label {
+            font-weight: 500;
+            color: var(--text-color);
         }
     `]
 })

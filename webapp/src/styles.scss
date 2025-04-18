@@ -28,6 +28,8 @@
   --component-bg: #fff;
   --header-bg: #fff;
   --sidebar-bg: #fff;
+
+  --primary-rgb: 13, 110, 253;
 }
 
 body {
@@ -55,6 +57,7 @@ body.dark-theme {
   --body-bg: #121212;
   --dark-color: #e9ecef;
   --light-color: #343a40;
+  --primary-rgb: 61, 139, 253;
 }
 
 /* Dark-Blue theme variables */
@@ -71,6 +74,7 @@ body.dark-blue-theme {
   --body-bg: #12263f;
   --dark-color: #e7f5ff;
   --light-color: #1f4b78;
+  --primary-rgb: 77, 171, 247;
 }
 
 /* Dark-Purple theme variables */
@@ -87,6 +91,7 @@ body.dark-purple-theme {
   --body-bg: #2b1f36;
   --dark-color: #f8f0fc;
   --light-color: #501f83;
+  --primary-rgb: 190, 75, 219;
 }
 
 /* Dark-Green theme variables */
@@ -103,6 +108,7 @@ body.dark-green-theme {
   --body-bg: #132b1f;
   --dark-color: #ebfbee;
   --light-color: #2b8a3e;
+  --primary-rgb: 64, 192, 87;
 }
 
 /* Dark-Orange theme variables */
@@ -119,6 +125,7 @@ body.dark-orange-theme {
   --body-bg: #2e1707;
   --dark-color: #fff4e6;
   --light-color: #de6b09;
+  --primary-rgb: 253, 126, 20;
 }
 
 /* Soft Dark theme variables - decentnejšia tmavá téma */
@@ -135,6 +142,7 @@ body.soft-dark-theme {
   --body-bg: #343a40;
   --dark-color: #f8f9fa;
   --light-color: #6c757d;
+  --primary-rgb: 92, 124, 250;
 }
 
 .app-container {
@@ -257,7 +265,7 @@ body.soft-dark-theme {
   --ag-background-color: var(--component-bg);
   --ag-foreground-color: var(--text-color);
   --ag-border-color: var(--border-color);
-  --ag-header-background-color: var(--component-bg);
+  --ag-header-background-color: var(--header-bg);
   --ag-odd-row-background-color: var(--component-bg);
   --ag-header-foreground-color: var(--text-color);
 
@@ -282,8 +290,155 @@ body.soft-dark-theme {
     }
 
     &.ag-row-selected {
-      background-color: rgba(61, 139, 253, 0.2) !important;
+      background-color: rgba(var(--primary-rgb, 61, 139, 253), 0.2) !important;
     }
+  }
+}
+
+// Dark theme specific AG Grid customizations
+body.dark-theme,
+body.dark-blue-theme,
+body.dark-purple-theme,
+body.dark-green-theme,
+body.dark-orange-theme,
+body.soft-dark-theme {
+  .ag-theme-alpine {
+    --ag-row-border-color: var(--border-color);
+    --ag-row-hover-color: var(--light-color);
+    --ag-selected-row-background-color: rgba(var(--primary-rgb, 61, 139, 253), 0.3);
+    --ag-header-column-separator-color: var(--border-color);
+    --ag-odd-row-background-color: var(--component-bg);
+    --ag-header-column-resize-handle-color: var(--border-color);
+    --ag-input-disabled-background-color: rgba(var(--primary-rgb, 61, 139, 253), 0.1);
+    --ag-input-disabled-border-color: var(--border-color);
+    --ag-disabled-foreground-color: var(--text-muted);
+    --ag-checkbox-checked-color: var(--primary-color);
+    --ag-checkbox-unchecked-color: var(--text-muted);
+    --ag-checkbox-background-color: var(--component-bg);
+    --ag-range-selection-background-color: rgba(var(--primary-rgb, 61, 139, 253), 0.2);
+    --ag-range-selection-background-color-2: rgba(var(--primary-rgb, 61, 139, 253), 0.36);
+    --ag-range-selection-background-color-3: rgba(var(--primary-rgb, 61, 139, 253), 0.49);
+    --ag-range-selection-background-color-4: rgba(var(--primary-rgb, 61, 139, 253), 0.59);
+  }
+
+  // Grid cell button styling
+  .ag-cell .btn-outline-primary {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+
+  .ag-cell .btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+  }
+
+  .ag-cell .btn-outline-secondary {
+    border-color: var(--secondary-color);
+    color: var(--secondary-color);
+  }
+
+  .ag-cell .btn-outline-secondary:hover {
+    background-color: var(--secondary-color);
+    color: #fff;
+  }
+
+  .ag-cell .btn-outline-danger {
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+  }
+
+  .ag-cell .btn-outline-danger:hover {
+    background-color: var(--danger-color);
+    color: #fff;
+  }
+
+  // Fix toolbar and evidence header
+  .view-container {
+    background-color: var(--component-bg);
+  }
+
+  .toolbar {
+    background-color: var(--component-bg);
+    border-bottom-color: var(--border-color);
+  }
+
+  .toolbar-actions {
+    background-color: var(--header-bg);
+  }
+
+  // Override hover and selected states
+  .ag-row {
+    &:hover {
+      background-color: var(--light-color) !important;
+    }
+
+    &.ag-row-selected {
+      background-color: rgba(var(--primary-rgb, 61, 139, 253), 0.3) !important;
+    }
+  }
+
+  // Ensure dialog form fields have proper colors
+  .record-editor-dialog .content-background {
+    color: var(--text-color);
+  }
+
+  .record-editor-dialog .form-control,
+  .record-editor-dialog input,
+  .record-editor-dialog select,
+  .record-editor-dialog textarea {
+    background-color: var(--component-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+  }
+
+  .record-editor-dialog .btn-sm {
+    border-color: var(--border-color);
+  }
+
+  // Dialog header and title
+  .record-editor-dialog .dialog-header h2,
+  .mat-dialog-title {
+    color: var(--text-color) !important;
+  }
+
+  // Tab headers in the dialog
+  .record-editor-dialog .nav-tabs .nav-link {
+    color: var(--text-color);
+  }
+
+  .record-editor-dialog .nav-tabs .nav-link:hover {
+    color: var(--primary-color);
+  }
+
+  .record-editor-dialog .nav-tabs .nav-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+  }
+
+  // Dialog section headings
+  .record-editor-dialog label.col-form-label,
+  .record-editor-dialog .form-label {
+    color: var(--text-color) !important;
+  }
+
+  // Section headings in the dialog form
+  .record-editor-dialog .form-fields label,
+  .record-editor-dialog .col-form-label,
+  .record-editor-dialog .form-label,
+  .record-editor-dialog .mb-3 label.col-sm-2.col-form-label,
+  .record-editor-dialog h4,
+  .record-editor-dialog h5,
+  .record-editor-dialog h6 {
+    color: var(--text-color) !important;
+  }
+
+  // Make tab switches more visible in dark themes
+  .record-editor-dialog .nav-tabs {
+    border-color: var(--border-color);
+  }
+
+  .record-editor-dialog .nav-tabs .nav-item {
+    margin-bottom: -1px;
   }
 }
 
