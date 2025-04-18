@@ -504,6 +504,196 @@ body.soft-dark-theme {
   border-top: 1px solid var(--border-color);
 }
 
+// Subitem definition dialog styling for dark theme
+.modal-content {
+  background-color: var(--component-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.modal-header {
+  background-color: var(--component-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.modal-header .modal-title {
+  color: var(--text-color);
+}
+
+.modal-body {
+  background-color: var(--component-bg);
+  color: var(--text-color);
+}
+
+.modal-footer {
+  background-color: var(--component-bg);
+  border-color: var(--border-color);
+}
+
+.modal-content input,
+.modal-content textarea,
+.modal-content select,
+.modal-content .form-control,
+.modal-content .form-select {
+  background-color: var(--component-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.modal-content .form-check-input {
+  background-color: var(--component-bg);
+  border-color: var(--border-color);
+}
+
+.modal-content .form-check-input:checked {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.modal-content .form-label,
+.modal-content label {
+  color: var(--text-color);
+}
+
+.modal-content .text-muted {
+  color: var(--text-muted) !important;
+}
+
+.modal-content .list-group-item {
+  background-color: var(--component-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.modal-content .table {
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.modal-content .table thead th {
+  border-color: var(--border-color);
+  background-color: var(--component-bg);
+  color: var(--text-color);
+}
+
+.modal-content .table tbody td {
+  border-color: var(--border-color);
+  vertical-align: middle;
+  padding: 6px;
+}
+
+/* Override select dropdowns in the table */
+.modal-content select,
+.modal-content select.form-select,
+.modal-content .form-select-sm,
+.modal-content select.form-control,
+.modal-content option {
+  background-color: var(--component-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Fix dropdown button appearance */
+.modal-content select.form-select {
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23adb5bd' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+}
+
+/* Fix trash and edit icons */
+.modal-content .btn-outline-danger,
+.modal-content .btn-outline-primary {
+  color: var(--text-color);
+  border-color: var(--border-color);
+  background-color: transparent;
+}
+
+.modal-content .btn-outline-danger:hover {
+  background-color: var(--danger-color);
+  color: white;
+  border-color: var(--danger-color);
+}
+
+.modal-content .btn-outline-primary:hover {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.modal-content .form-control,
+.modal-content .form-control-sm {
+  background-color: var(--component-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+/* Fix checkbox appearance */
+.modal-content input[type="checkbox"] {
+  background-color: var(--component-bg);
+  border-color: var(--border-color);
+}
+
+.modal-content input[type="checkbox"]:checked {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Fix table row appearance */
+.modal-content .table > :not(caption) > * > * {
+  background-color: var(--component-bg);
+  color: var(--text-color);
+  box-shadow: none;
+}
+
+.modal-content .btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.modal-content .subitem-form {
+  background-color: var(--component-bg);
+  border-color: var(--border-color) !important;
+}
+
+// Formula Editor Dialog styling for dark theme
+.modal-content .alert-info {
+  background-color: rgba(var(--primary-rgb), 0.1);
+  color: var(--text-color);
+  border-color: rgba(var(--primary-rgb), 0.2);
+}
+
+/* Field and operator buttons in formula editor */
+.modal-content .formula-button {
+  background-color: var(--component-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+.modal-content .formula-button:hover {
+  background-color: var(--light-color) !important;
+}
+
+.modal-content .formula-field-button {
+  background-color: rgba(var(--primary-rgb), 0.1) !important;
+  border-color: rgba(var(--primary-rgb), 0.2) !important;
+  color: var(--text-color) !important;
+}
+
+.modal-content .formula-operator-button {
+  background-color: var(--component-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.modal-content textarea {
+  background-color: var(--component-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
 // Category menu styles
 .category-menu {
   .category-item {
