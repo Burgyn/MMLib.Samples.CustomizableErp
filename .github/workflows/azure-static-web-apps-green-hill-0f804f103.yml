@@ -33,18 +33,40 @@ jobs:
           find webapp/dist -type f -size +5M | sort -k2 -n
           echo "Total size of dist directory:"
           du -sh webapp/dist
-      - name: Prepare Deployment (Minimal)
+      - name: Prepare Deployment (Including Icons and Critical Assets)
         run: |
           mkdir -p output_static_webapp
-          # Copy only the essential files
+          # Copy index.html and routes.json
           cp webapp/dist/webapp/browser/index.html output_static_webapp/
           cp webapp/routes.json output_static_webapp/
-          mkdir -p output_static_webapp/assets
+          
           # Copy JS and CSS files
-          find webapp/dist/webapp/browser -name "*.js" -o -name "*.css" | xargs -I{} cp {} output_static_webapp/
+          find webapp/dist/webapp/browser -name "*.js" | xargs -I{} cp {} output_static_webapp/
+          find webapp/dist/webapp/browser -name "*.css" | xargs -I{} cp {} output_static_webapp/
+          
+          # Copy favicon
+          find webapp/dist/webapp/browser -name "favicon.ico" | xargs -I{} cp {} output_static_webapp/
+          
+          # Copy Bootstrap icons and media
+          mkdir -p output_static_webapp/media
+          if [ -d webapp/dist/webapp/browser/media ]; then
+            cp -r webapp/dist/webapp/browser/media/* output_static_webapp/media/
+          fi
+          
+          # Look for font files (.woff, .woff2, etc.) and copy them
+          find webapp/dist/webapp/browser -name "*.woff" -o -name "*.woff2" -o -name "*.ttf" -o -name "*.eot" -o -name "*.svg" | xargs -I{} cp {} output_static_webapp/
+          
+          # Create assets directory if needed
+          mkdir -p output_static_webapp/assets
+          if [ -d webapp/dist/webapp/browser/assets ]; then
+            cp -r webapp/dist/webapp/browser/assets/* output_static_webapp/assets/
+          fi
+          
           # Check size of deployment package
           echo "Size of deployment directory:"
           du -sh output_static_webapp
+          echo "Content of output directory:"
+          find output_static_webapp -type f | sort
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
