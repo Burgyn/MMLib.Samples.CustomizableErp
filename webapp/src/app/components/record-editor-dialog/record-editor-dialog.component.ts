@@ -1120,6 +1120,9 @@ export class RecordEditorDialogComponent implements OnInit {
                     this.subitems[subitemDef.fieldName] = [];
                 }
                 this.subitems[subitemDef.fieldName].push(result);
+
+                // Create a new array reference to trigger change detection in ag-grid
+                this.subitems[subitemDef.fieldName] = [...this.subitems[subitemDef.fieldName]];
             }
         });
     }
