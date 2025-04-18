@@ -264,7 +264,7 @@ export class EvidenceViewComponent implements OnInit {
         this.columnDefs.push({
             headerName: 'Akcie',
             field: 'actions',
-            width: 100,
+            width: 150,
             sortable: false,
             filter: false,
             pinned: 'right',
@@ -273,6 +273,9 @@ export class EvidenceViewComponent implements OnInit {
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-outline-primary" data-action="edit">
                             <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" data-action="duplicate">
+                            <i class="bi bi-copy"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-danger" data-action="delete">
                             <i class="bi bi-trash"></i>
@@ -286,6 +289,8 @@ export class EvidenceViewComponent implements OnInit {
                     this.editRecord(params.data);
                 } else if (action === 'delete') {
                     this.deleteRecord(params.data);
+                } else if (action === 'duplicate') {
+                    this.duplicateRecord(params.data);
                 }
             }
         });
@@ -344,6 +349,23 @@ export class EvidenceViewComponent implements OnInit {
                 this.loadRecords(record.evidenceId);
             });
         }
+    }
+
+    duplicateRecord(record: EvidenceRecord): void {
+        if (!this.evidence) return;
+
+        // Create a copy of the record without the id
+        const recordCopy: Partial<EvidenceRecord> = {
+            evidenceId: record.evidenceId,
+            documentNumber: `${record.documentNumber || ''} (kópia)`,
+            tags: record.tags ? [...record.tags] : [],
+            data: {...record.data}
+        };
+
+        this.evidenceService.saveRecord(this.evidence.id, recordCopy as EvidenceRecord)
+            .subscribe(() => {
+                this.loadRecords(this.evidence!.id);
+            });
     }
 
     editEvidence(): void {
