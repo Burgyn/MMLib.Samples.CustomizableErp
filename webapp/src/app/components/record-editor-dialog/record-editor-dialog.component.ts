@@ -27,13 +27,27 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
                 <div class="mb-3 row align-items-center form-group-sm">
                     <label class="col-sm-2 col-form-label">Tagy</label>
                     <div class="col-sm-10 tags-section">
-                        <span *ngFor="let tag of tags; let i = index" class="tag-badge badge me-1">
+                        <span *ngFor="let tag of tags; let i = index" class="tag-badge badge me-1" [style.background-color]="getTagColor(tag)">
                             {{ tag }}
                             <button type="button" class="btn-close btn-close-white" aria-label="Remove tag" (click)="removeTag(i)"></button>
                         </span>
-                        <div class="add-tag-wrapper d-inline-block">
-                            <input type="text" class="form-control form-control-sm add-tag-input" [(ngModel)]="newTag" placeholder="Pridať tag..." (keyup.enter)="addTag()">
+                        <div class="add-tag-wrapper d-inline-block position-relative">
+                            <input type="text" class="form-control form-control-sm add-tag-input"
+                                [(ngModel)]="newTag"
+                                placeholder="Pridať tag..."
+                                (keyup.enter)="addTag()"
+                                (blur)="handleTagBlur()"
+                                (input)="filterSuggestions()"
+                                #tagInput>
                             <button type="button" class="btn btn-sm btn-outline-secondary add-tag-btn" (click)="addTag()" title="Pridať tag">+</button>
+                            <div *ngIf="filteredSuggestions.length > 0 && tagInput.value" class="tag-suggestions">
+                                <div *ngFor="let suggestion of filteredSuggestions"
+                                    class="tag-suggestion-item"
+                                    (click)="selectSuggestion(suggestion)"
+                                    [style.background-color]="getTagColor(suggestion, 0.2)">
+                                    {{ suggestion }}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -247,22 +261,27 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.35rem;
         }
         .tag-badge {
             font-size: 0.8em;
-            padding: 0.4em 0.6em;
+            padding: 0.35em 0.6em;
             display: inline-flex;
             align-items: center;
-            background-color: #6c757d;
             color: white;
-            border-radius: 0.25rem;
+            border-radius: 0.9rem;
+            font-weight: normal;
+            border: none;
         }
         .tag-badge .btn-close {
             margin-left: 0.5em;
             width: 0.5em;
             height: 0.5em;
             filter: brightness(0) invert(1);
+            opacity: 0.7;
+        }
+        .tag-badge .btn-close:hover {
+            opacity: 1;
         }
         .add-tag-wrapper {
             position: relative;
@@ -270,13 +289,14 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
             align-items: center;
         }
         .add-tag-input {
-            min-width: 100px;
+            min-width: 120px;
             width: auto;
             padding-right: 30px;
             display: inline-block;
             font-size: 0.875rem;
             padding: 0.25rem 0.5rem;
             height: calc(1.5em + 0.5rem + 2px);
+            border-radius: 0.9rem;
         }
         .add-tag-btn {
             position: absolute;
@@ -292,6 +312,30 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
             font-size: 1.2rem;
             color: #6c757d;
             cursor: pointer;
+        }
+        .tag-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            max-height: 150px;
+            overflow-y: auto;
+            background-color: white;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 1050;
+        }
+        .tag-suggestion-item {
+            padding: 0.35rem 0.6rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .tag-suggestion-item:last-child {
+            border-bottom: none;
+        }
+        .tag-suggestion-item:hover {
+            background-color: rgba(0,0,0,0.05);
         }
         .mat-mdc-dialog-actions {
             flex-shrink: 0;
@@ -329,6 +373,7 @@ export class RecordEditorDialogComponent implements OnInit {
     @ViewChild('formContainer') formContainer!: ElementRef;
     @ViewChild('cancelButton') cancelButton!: ElementRef;
     @ViewChild('saveButton') saveButton!: ElementRef;
+    @ViewChild('tagInput') tagInput!: ElementRef;
 
     recordForm: FormGroup;
     formHtml: SafeHtml;
@@ -342,6 +387,9 @@ export class RecordEditorDialogComponent implements OnInit {
     documentNumber: string = '';
     tags: string[] = [];
     newTag: string = '';
+    tagSuggestions: string[] = [];
+    filteredSuggestions: string[] = [];
+    tagColors: { [key: string]: string } = {};
 
     constructor(
         private fb: FormBuilder,
@@ -370,6 +418,9 @@ export class RecordEditorDialogComponent implements OnInit {
             this.documentNumber = this.data.record.documentNumber || '';
             this.tags = [...(this.data.record.tags || [])];
         }
+
+        // Load saved tags from localStorage
+        this.loadTagSuggestions();
     }
 
     toggleDebug(): void {
@@ -632,6 +683,13 @@ export class RecordEditorDialogComponent implements OnInit {
             if (docNumberInput) {
                 docNumberInput.focus();
             }
+
+            // Generate colors for existing tags
+            this.tags.forEach(tag => {
+                if (!this.tagColors[tag]) {
+                    this.tagColors[tag] = this.generatePastelColor();
+                }
+            });
         });
     }
 
@@ -719,18 +777,152 @@ export class RecordEditorDialogComponent implements OnInit {
         });
     }
 
+    private loadTagSuggestions(): void {
+        const savedTags = localStorage.getItem('erp-tags');
+        if (savedTags) {
+            try {
+                this.tagSuggestions = JSON.parse(savedTags);
+
+                // Load saved colors
+                const savedColors = localStorage.getItem('erp-tag-colors');
+                if (savedColors) {
+                    this.tagColors = JSON.parse(savedColors);
+                }
+            } catch (e) {
+                console.error('Failed to parse saved tags:', e);
+                this.tagSuggestions = [];
+            }
+        } else {
+            this.tagSuggestions = [];
+        }
+    }
+
+    private saveTagSuggestions(): void {
+        // Save unique tags to localStorage
+        const uniqueTags = Array.from(new Set([...this.tagSuggestions, ...this.tags]));
+        localStorage.setItem('erp-tags', JSON.stringify(uniqueTags));
+
+        // Save tag colors
+        localStorage.setItem('erp-tag-colors', JSON.stringify(this.tagColors));
+    }
+
+    filterSuggestions(): void {
+        const searchTerm = this.newTag.toLowerCase().trim();
+        if (!searchTerm) {
+            this.filteredSuggestions = [];
+            return;
+        }
+
+        this.filteredSuggestions = this.tagSuggestions
+            .filter(tag => tag.toLowerCase().includes(searchTerm) && !this.tags.includes(tag))
+            .slice(0, 5); // Limit to 5 suggestions
+    }
+
+    selectSuggestion(tag: string): void {
+        this.newTag = '';
+        this.addSpecificTag(tag);
+        setTimeout(() => this.tagInput.nativeElement.focus(), 0);
+    }
+
+    handleTagBlur(): void {
+        // Add tag on blur after a short delay to allow for suggestion clicks
+        setTimeout(() => {
+            if (this.newTag.trim()) {
+                this.addTag();
+            }
+            this.filteredSuggestions = [];
+        }, 200);
+    }
+
     addTag(): void {
         const tagToAdd = this.newTag.trim();
+        this.addSpecificTag(tagToAdd);
+    }
+
+    addSpecificTag(tagToAdd: string): void {
         if (tagToAdd && !this.tags.includes(tagToAdd)) {
+            // Add to current tags
             this.tags.push(tagToAdd);
+
+            // Generate color if not exists
+            if (!this.tagColors[tagToAdd]) {
+                this.tagColors[tagToAdd] = this.generatePastelColor();
+            }
+
+            // Add to suggestions if not exists
+            if (!this.tagSuggestions.includes(tagToAdd)) {
+                this.tagSuggestions.push(tagToAdd);
+                this.saveTagSuggestions();
+            }
         }
         this.newTag = ''; // Clear input
+        this.filteredSuggestions = [];
     }
 
     removeTag(index: number): void {
         if (index >= 0 && index < this.tags.length) {
             this.tags.splice(index, 1);
         }
+    }
+
+    getTagColor(tag: string, opacity: number = 1): string {
+        if (!this.tagColors[tag]) {
+            this.tagColors[tag] = this.generatePastelColor();
+            this.saveTagSuggestions();
+        }
+
+        if (opacity < 1) {
+            // Convert hex to rgba with opacity
+            const hex = this.tagColors[tag].replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        return this.tagColors[tag];
+    }
+
+    generatePastelColor(): string {
+        // Generate pastel colors by using high lightness values
+        const hue = Math.floor(Math.random() * 360); // 0-359 degrees
+        const saturation = 65 + Math.floor(Math.random() * 25); // 65-90%
+        const lightness = 65 + Math.floor(Math.random() * 15); // 65-80%
+
+        // Convert HSL to HEX
+        return this.hslToHex(hue, saturation, lightness);
+    }
+
+    private hslToHex(h: number, s: number, l: number): string {
+        s /= 100;
+        l /= 100;
+
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        const m = l - c / 2;
+
+        let r = 0, g = 0, b = 0;
+
+        if (0 <= h && h < 60) {
+            r = c; g = x; b = 0;
+        } else if (60 <= h && h < 120) {
+            r = x; g = c; b = 0;
+        } else if (120 <= h && h < 180) {
+            r = 0; g = c; b = x;
+        } else if (180 <= h && h < 240) {
+            r = 0; g = x; b = c;
+        } else if (240 <= h && h < 300) {
+            r = x; g = 0; b = c;
+        } else if (300 <= h && h < 360) {
+            r = c; g = 0; b = x;
+        }
+
+        const toHex = (rgb: number) => {
+            const hex = Math.round((rgb + m) * 255).toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        };
+
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
     }
 
     cancel(): void {
@@ -741,6 +933,9 @@ export class RecordEditorDialogComponent implements OnInit {
         // Ensure dynamic form controls are valid if needed
         // Currently, recordForm might be empty if no dynamic fields exist
         // Add validation logic here if required
+
+        // Save tags to local storage before closing
+        this.saveTagSuggestions();
 
         const record: Partial<EvidenceRecord> = {
             id: this.data.record?.id,
