@@ -3,6 +3,7 @@ import { ColDef, GridOptions } from 'ag-grid-community';
 import { Component, OnInit } from '@angular/core';
 import { Evidence, EvidenceRecord } from '../../models/evidence.model';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { Observable, of } from 'rxjs';
 
 import { AgGridModule } from 'ag-grid-angular';
 import { CommonModule } from '@angular/common';
@@ -22,6 +23,9 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
                         <div class="evidence-actions">
                             <button class="btn btn-link edit-button" (click)="editEvidence()">
                                 <i class="bi bi-gear"></i>
+                            </button>
+                            <button class="btn btn-link duplicate-button" (click)="duplicateEvidence()">
+                                <i class="bi bi-copy"></i>
                             </button>
                             <button class="btn btn-link delete-button" (click)="deleteEvidence()">
                                 <i class="bi bi-trash"></i>
@@ -79,7 +83,7 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
         .evidence-title {
             position: relative;
             display: inline-block;
-            padding-right: 5rem;
+            padding-right: 8rem;
 
             .evidence-actions {
                 position: absolute;
@@ -89,11 +93,18 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
                 display: flex;
                 opacity: 0;
                 transition: opacity 0.2s;
+                width: 7.5rem;
+                justify-content: flex-end;
             }
 
-            .edit-button, .delete-button {
+            .edit-button, .duplicate-button, .delete-button {
                 padding: 0.25rem;
                 color: #6c757d;
+                margin-left: 0.25rem;
+            }
+
+            .duplicate-button {
+                color: #0d6efd;
             }
 
             .delete-button {
@@ -388,6 +399,99 @@ export class EvidenceViewComponent implements OnInit {
                 }
             });
         }
+    }
+
+    duplicateEvidence(): void {
+        if (!this.evidence) return;
+
+        // Create a copy of the evidence without the id
+        const evidenceCopy: Evidence = {
+            ...this.evidence,
+            id: '',
+            name: `${this.evidence.name} (kópia)`,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        // Save the new evidence
+        this.evidenceService.saveEvidence(evidenceCopy).subscribe({
+            next: (newEvidence) => {
+                // Now duplicate all records
+                this.duplicateEvidenceRecords(this.evidence!.id, newEvidence.id);
+            },
+            error: (err) => {
+                console.error('Error duplicating evidence:', err);
+                alert('Failed to duplicate evidence. Please try again.');
+            }
+        });
+    }
+
+    private duplicateEvidenceRecords(sourceEvidenceId: string, targetEvidenceId: string): void {
+        this.evidenceService.getRecords(sourceEvidenceId).subscribe({
+            next: (records) => {
+                // Create an array of observables for each record save operation
+                const saveObservables = records.map(record => {
+                    const recordCopy: Partial<EvidenceRecord> = {
+                        evidenceId: targetEvidenceId,
+                        documentNumber: record.documentNumber,
+                        tags: record.tags ? [...record.tags] : [],
+                        data: {...record.data}
+                    };
+                    return this.evidenceService.saveRecord(targetEvidenceId, recordCopy as EvidenceRecord);
+                });
+
+                // Wait for all record save operations to complete
+                if (saveObservables.length === 0) {
+                    this.router.navigate(['/evidence', targetEvidenceId]);
+                    return;
+                }
+
+                // Use forkJoin to execute all observables in parallel
+                const forkJoin = (saveObservables: Observable<any>[]) => {
+                    if (saveObservables.length === 0) {
+                        return of([]);
+                    }
+                    return new Observable(subscriber => {
+                        let completed = 0;
+                        const results: any[] = [];
+
+                        saveObservables.forEach((observable, index) => {
+                            observable.subscribe({
+                                next: (value) => {
+                                    results[index] = value;
+                                    completed++;
+
+                                    if (completed === saveObservables.length) {
+                                        subscriber.next(results);
+                                        subscriber.complete();
+                                    }
+                                },
+                                error: (err) => {
+                                    subscriber.error(err);
+                                }
+                            });
+                        });
+                    });
+                };
+
+                forkJoin(saveObservables).subscribe({
+                    next: () => {
+                        // Navigate to the new evidence
+                        this.router.navigate(['/evidence', targetEvidenceId]);
+                    },
+                    error: (err) => {
+                        console.error('Error duplicating records:', err);
+                        alert('Evidence structure was duplicated but some records may not have been copied. Please check and try again if needed.');
+                        this.router.navigate(['/evidence', targetEvidenceId]);
+                    }
+                });
+            },
+            error: (err) => {
+                console.error('Error loading records for duplication:', err);
+                // Still navigate to the new evidence even if records couldn't be loaded
+                this.router.navigate(['/evidence', targetEvidenceId]);
+            }
+        });
     }
 
     onGridReady(params: any): void {
