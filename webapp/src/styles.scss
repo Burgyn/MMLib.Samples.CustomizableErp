@@ -566,6 +566,29 @@ body.soft-dark-theme {
   border-color: var(--border-color);
 }
 
+/* Hover effects for list items */
+.modal-content .list-group-item:hover,
+.modal-content .list-group-item.list-group-item-action:hover {
+  background-color: rgba(var(--primary-rgb), 0.1);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.modal-content .list-group-item.active,
+.modal-content .list-group-item.list-group-item-action.active {
+  background-color: rgba(var(--primary-rgb), 0.2);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.modal-content .list-group-item .text-muted {
+  color: var(--text-muted) !important;
+}
+
+.modal-content .list-group-item .small {
+  color: var(--text-muted) !important;
+}
+
 .modal-content .table {
   color: var(--text-color);
   border-color: var(--border-color);
