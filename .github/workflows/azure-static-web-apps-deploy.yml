@@ -33,18 +33,15 @@ jobs:
         run: |
           cd webapp
           npm run build
-      - name: Debug - List build output structure
+      - name: Debug - Verify index.html exists
         run: |
-          echo "Listing webapp directory:"
-          find webapp -type f -name "index.html" | sort
-          echo "Contents of webapp/dist directory:"
-          find webapp/dist -type f | sort
-          echo "Contents of webapp/dist/webapp directory:"
-          ls -la webapp/dist/webapp/
-      - name: Fix asset paths
-        run: |
-          cp -r webapp/dist/webapp/* webapp/
-          ls -la webapp/
+          echo "Checking for built index.html file:"
+          if [ -f webapp/dist/webapp/index.html ]; then
+            echo "Index.html exists in webapp/dist/webapp/"
+            cat webapp/dist/webapp/index.html | head -5
+          else
+            echo "ERROR: Index.html NOT found in webapp/dist/webapp/"
+          fi
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -54,8 +51,7 @@ jobs:
           action: "upload"
           app_location: "./webapp"
           api_location: ""
-          output_location: ""
-          skip_app_build: true
+          output_location: "dist/webapp"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
