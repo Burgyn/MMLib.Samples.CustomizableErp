@@ -42,6 +42,12 @@ jobs:
           else
             echo "ERROR: Index.html NOT found in webapp/dist/webapp/"
           fi
+      - name: Prepare deployment
+        run: |
+          # Move the built files to app location
+          mkdir -p output_static_webapp
+          cp -r webapp/dist/webapp/* output_static_webapp/
+          ls -la output_static_webapp/
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -49,9 +55,10 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_GREEN_HILL_0F804F103 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "./webapp"
+          app_location: "./output_static_webapp"
           api_location: ""
-          output_location: "dist/webapp"
+          output_location: ""
+          skip_app_build: true
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
