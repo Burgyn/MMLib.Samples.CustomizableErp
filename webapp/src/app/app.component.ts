@@ -1,11 +1,11 @@
 import { Category, Evidence, EvidenceRecord } from './models/evidence.model';
-import { Component, ElementRef, ViewChild, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { EvidenceService, ExportData } from './services/evidence.service';
-import { ThemeService } from './services/theme.service';
 
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { SideMenuComponent } from './components/side-menu/side-menu.component';
+import { ThemeService } from './services/theme.service';
 
 @Component({
     selector: 'app-root',
@@ -19,11 +19,29 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
                     <span class="ms-2">Super EShop</span>
                 </div>
                 <div class="header-actions">
-                    <!-- Theme toggle button -->
-                    <button class="btn btn-link theme-toggle" (click)="toggleTheme()" [title]="isDarkTheme ? 'Prepnúť na svetlý režim' : 'Prepnúť na tmavý režim'">
-                        <i *ngIf="isDarkTheme" class="bi bi-sun-fill"></i>
-                        <i *ngIf="!isDarkTheme" class="bi bi-moon-fill"></i>
-                    </button>
+                    <!-- Theme selector -->
+                    <div class="theme-selector">
+                        <button class="btn btn-link theme-toggle" (click)="toggleThemeMenu()" [title]="'Zmeniť tému'">
+                            <i *ngIf="currentTheme === 'light'" class="bi bi-sun-fill"></i>
+                            <i *ngIf="currentTheme === 'dark'" class="bi bi-moon-fill"></i>
+                            <i *ngIf="currentTheme === 'dark-blue'" class="bi bi-moon-stars-fill"></i>
+                            <i *ngIf="currentTheme === 'dark-green'" class="bi bi-tree-fill"></i>
+                        </button>
+                        <div class="theme-menu" *ngIf="isThemeMenuOpen">
+                            <button class="theme-item" (click)="switchTheme('light')">
+                                <i class="bi bi-sun-fill"></i> Svetlá téma
+                            </button>
+                            <button class="theme-item" (click)="switchTheme('dark')">
+                                <i class="bi bi-moon-fill"></i> Tmavá téma
+                            </button>
+                            <button class="theme-item" (click)="switchTheme('dark-blue')">
+                                <i class="bi bi-moon-stars-fill"></i> Tmavá modrá téma
+                            </button>
+                            <button class="theme-item" (click)="switchTheme('dark-green')">
+                                <i class="bi bi-tree-fill"></i> Tmavá zelená téma
+                            </button>
+                        </div>
+                    </div>
 
                     <!-- Export/Import buttons -->
                     <button class="btn btn-link" (click)="exportAllData()" title="Exportovať všetky dáta">
@@ -133,8 +151,53 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
             z-index: 9999;
         }
 
-        .dark-theme .loading-overlay {
+        .dark-theme .loading-overlay,
+        .dark-blue-theme .loading-overlay,
+        .dark-purple-theme .loading-overlay,
+        .dark-green-theme .loading-overlay,
+        .dark-orange-theme .loading-overlay {
             background-color: rgba(0, 0, 0, 0.6);
+        }
+
+        /* Theme selector styles */
+        .theme-selector {
+            position: relative;
+        }
+
+        .theme-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 220px;
+            background-color: var(--component-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            padding: 0.5rem 0;
+            margin-top: 0.25rem;
+        }
+
+        .theme-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            transition: background-color 0.15s ease;
+            cursor: pointer;
+        }
+
+        .theme-item:hover {
+            background-color: var(--light-color);
+        }
+
+        .theme-item i {
+            margin-right: 0.5rem;
+            color: var(--primary-color);
         }
     `]
 })
@@ -143,7 +206,8 @@ export class AppComponent implements OnInit {
     title = 'Customizable ERP';
     isLoading = false;
     loadingMessage = 'Prosím čakajte...';
-    isDarkTheme = false;
+    currentTheme = 'light';
+    isThemeMenuOpen = false;
 
     constructor(
         private evidenceService: EvidenceService,
@@ -153,15 +217,37 @@ export class AppComponent implements OnInit {
     ngOnInit(): void {
         // Subscribe na zmeny témy
         this.themeService.currentTheme$.subscribe(theme => {
-            this.isDarkTheme = theme === 'dark';
+            this.currentTheme = theme;
+        });
+
+        // Zatvorí menu pri kliknutí mimo neho
+        document.addEventListener('click', (event) => {
+            if (this.isThemeMenuOpen && !event.composedPath().some(el => el instanceof HTMLElement && el.classList.contains('theme-selector'))) {
+                this.isThemeMenuOpen = false;
+            }
+        });
+
+        // Zatvorí menu pri stlačení klávesy Escape
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.isThemeMenuOpen) {
+                this.isThemeMenuOpen = false;
+            }
         });
     }
 
     /**
-     * Prepína medzi svetlou a tmavou témou
+     * Prepína zobrazenie menu témy
      */
-    toggleTheme(): void {
-        this.themeService.toggleTheme();
+    toggleThemeMenu(): void {
+        this.isThemeMenuOpen = !this.isThemeMenuOpen;
+    }
+
+    /**
+     * Nastaví konkrétnu tému
+     */
+    switchTheme(theme: 'light' | 'dark' | 'dark-blue' | 'dark-purple' | 'dark-green' | 'dark-orange' | 'soft-dark'): void {
+        this.themeService.switchToTheme(theme);
+        this.isThemeMenuOpen = false;
     }
 
     /**

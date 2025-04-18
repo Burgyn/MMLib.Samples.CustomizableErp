@@ -57,6 +57,86 @@ body.dark-theme {
   --light-color: #343a40;
 }
 
+/* Dark-Blue theme variables */
+body.dark-blue-theme {
+  --primary-color: #4dabf7;
+  --secondary-color: #9db2bf;
+  --border-color: #456377;
+  --text-color: #e7f5ff;
+  --text-muted: #a5d8ff;
+  --app-bg: #12263f;
+  --component-bg: #1c3a60;
+  --header-bg: #164a7b;
+  --sidebar-bg: #164a7b;
+  --body-bg: #12263f;
+  --dark-color: #e7f5ff;
+  --light-color: #1f4b78;
+}
+
+/* Dark-Purple theme variables */
+body.dark-purple-theme {
+  --primary-color: #be4bdb;
+  --secondary-color: #b197c7;
+  --border-color: #6741d9;
+  --text-color: #f8f0fc;
+  --text-muted: #e599f7;
+  --app-bg: #2b1f36;
+  --component-bg: #3b2856;
+  --header-bg: #462772;
+  --sidebar-bg: #462772;
+  --body-bg: #2b1f36;
+  --dark-color: #f8f0fc;
+  --light-color: #501f83;
+}
+
+/* Dark-Green theme variables */
+body.dark-green-theme {
+  --primary-color: #40c057;
+  --secondary-color: #8cbea0;
+  --border-color: #2b8a3e;
+  --text-color: #ebfbee;
+  --text-muted: #8ce99a;
+  --app-bg: #132b1f;
+  --component-bg: #1b3c2b;
+  --header-bg: #204d36;
+  --sidebar-bg: #204d36;
+  --body-bg: #132b1f;
+  --dark-color: #ebfbee;
+  --light-color: #2b8a3e;
+}
+
+/* Dark-Orange theme variables */
+body.dark-orange-theme {
+  --primary-color: #fd7e14;
+  --secondary-color: #fab571;
+  --border-color: #e67700;
+  --text-color: #fff4e6;
+  --text-muted: #ffc078;
+  --app-bg: #2e1707;
+  --component-bg: #471f0a;
+  --header-bg: #5f2a0d;
+  --sidebar-bg: #5f2a0d;
+  --body-bg: #2e1707;
+  --dark-color: #fff4e6;
+  --light-color: #de6b09;
+}
+
+/* Soft Dark theme variables - decentnejšia tmavá téma */
+body.soft-dark-theme {
+  --primary-color: #5c7cfa;
+  --secondary-color: #adb5bd;
+  --border-color: #ced4da;
+  --text-color: #ced4da;
+  --text-muted: #adb5bd;
+  --app-bg: #343a40;
+  --component-bg: #495057;
+  --header-bg: #495057;
+  --sidebar-bg: #495057;
+  --body-bg: #343a40;
+  --dark-color: #f8f9fa;
+  --light-color: #6c757d;
+}
+
 .app-container {
   display: flex;
   height: 100vh;
@@ -332,25 +412,26 @@ body:not(.dark-theme) {
 }
 
 /* GrapesJS Dark Theme Override */
-body.dark-theme {
+body.dark-theme, body.dark-blue-theme, body.dark-purple-theme,
+body.dark-green-theme, body.dark-orange-theme, body.soft-dark-theme {
   .gjs-one-bg {
-      background-color: #2a2a2a !important;
+      background-color: var(--component-bg) !important;
   }
 
   .gjs-one-color {
-      color: #e9ecef !important;
+      color: var(--text-color) !important;
   }
 
   .gjs-one-color-h:hover {
-      color: #ffffff !important;
+      color: var(--text-color) !important;
   }
 
   .gjs-two-bg {
-      background-color: #1e1e1e !important;
+      background-color: var(--app-bg) !important;
   }
 
   .gjs-two-color {
-      color: #e9ecef !important;
+      color: var(--text-color) !important;
   }
 
   .gjs-two-color-h:hover {
@@ -358,28 +439,30 @@ body.dark-theme {
   }
 
   .gjs-three-bg {
-      background-color: #2c2c2c !important;
-      color: #e9ecef !important;
+      background-color: var(--sidebar-bg) !important;
+      color: var(--text-color) !important;
   }
 
   .gjs-three-color {
-      color: #3d8bfd !important;
+      color: var(--primary-color) !important;
   }
 
   .gjs-three-color-h:hover {
-      color: #5a9cfd !important;
+      color: var(--primary-color) !important;
+      filter: brightness(120%) !important;
   }
 
   .gjs-four-bg {
-      background-color: #333333 !important;
+      background-color: var(--header-bg) !important;
   }
 
   .gjs-four-color {
-      color: #3d8bfd !important;
+      color: var(--primary-color) !important;
   }
 
   .gjs-four-color-h:hover {
-      color: #5a9cfd !important;
+      color: var(--primary-color) !important;
+      filter: brightness(120%) !important;
   }
 }
 
@@ -462,11 +545,72 @@ body.dark-theme {
     color: var(--text-color);
   }
 
-  .bi-moon-fill, .bi-sun-fill {
+  .bi-moon-fill, .bi-sun-fill, .bi-moon-stars-fill, .bi-cloud-moon-fill {
     transition: transform 0.3s ease;
   }
 
-  &:hover .bi-moon-fill, &:hover .bi-sun-fill {
+  &:hover .bi-moon-fill, &:hover .bi-sun-fill,
+  &:hover .bi-moon-stars-fill, &:hover .bi-cloud-moon-fill {
     transform: rotate(15deg);
   }
+}
+
+/* Theme dropdown styles */
+.dropdown-menu {
+  background-color: var(--component-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  padding: 0.5rem 0;
+}
+
+.dropdown-item {
+  color: var(--text-color);
+  padding: 0.5rem 1rem;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--light-color);
+  }
+
+  i {
+    color: var(--primary-color);
+  }
+}
+
+/* Theme indicator in the dropdown */
+.theme-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.theme-light-indicator {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+}
+
+.theme-dark-indicator {
+  background-color: #212529;
+  border: 1px solid #343a40;
+}
+
+.theme-blue-indicator {
+  background-color: #12263f;
+  border: 1px solid #164a7b;
+}
+
+.theme-purple-indicator {
+  background-color: #2b1f36;
+  border: 1px solid #462772;
+}
+
+.dark-theme .loading-overlay,
+.dark-blue-theme .loading-overlay,
+.dark-purple-theme .loading-overlay,
+.dark-green-theme .loading-overlay,
+.dark-orange-theme .loading-overlay,
+.soft-dark-theme .loading-overlay {
+    background-color: rgba(0, 0, 0, 0.6);
 }
