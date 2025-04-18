@@ -56,40 +56,58 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
             </div>
 
             <!-- Main Content Panel -->
-            <div mat-dialog-content>
-                <div class="content-panel">
-                    <form [formGroup]="recordForm" class="form-container p-0" #formContainer>
+            <div mat-dialog-content class="content-background">
+                <!-- Main Form Card -->
+                <div class="content-card mb-4">
+                    <form [formGroup]="recordForm" class="form-container p-3" #formContainer>
                         <div [innerHTML]="formHtml" class="form-fields"></div>
-
-                        <!-- Subitems Sections -->
-                        <div *ngIf="data.evidence.subitemDefinitions && data.evidence.subitemDefinitions.length > 0" class="subitems-section mt-4">
-                            <ng-container *ngFor="let subitemDef of data.evidence.subitemDefinitions">
-                                <div class="subitem-grid-container mt-4 mb-4">
-                                    <div class="subitem-header d-flex justify-content-between align-items-center mb-2">
-                                        <h5 class="mb-0">{{ subitemDef.name }}</h5>
-                                        <button class="btn btn-sm btn-outline-primary" (click)="addSubitem(subitemDef)">
-                                            <i class="bi bi-plus-lg"></i> Pridať položku
-                                        </button>
-                                    </div>
-
-                                    <div class="ag-theme-alpine subitem-grid">
-                                        <ag-grid-angular
-                                            [rowData]="getSubitemRows(subitemDef.fieldName)"
-                                            [columnDefs]="getSubitemColumnDefs(subitemDef)"
-                                            [defaultColDef]="{ sortable: true, filter: true, resizable: true }"
-                                            [pagination]="false"
-                                            [domLayout]="'autoHeight'"
-                                            [rowHeight]="40"
-                                        ></ag-grid-angular>
-                                    </div>
-                                </div>
-                            </ng-container>
-                        </div>
-
-                        <div class="debug-section mt-3" *ngIf="showDebug">
-                            <pre class="debug-info">{{ debugInfo }}</pre>
-                        </div>
                     </form>
+                </div>
+
+                <!-- Subitems Sections -->
+                <div *ngIf="data.evidence.subitemDefinitions && data.evidence.subitemDefinitions.length > 0" class="mb-4">
+                    <div class="content-card subitems-panel">
+                        <div class="panel-header">
+                            <ul class="nav nav-tabs border-0">
+                                <li class="nav-item" *ngFor="let subitemDef of data.evidence.subitemDefinitions; let i = index">
+                                    <a class="nav-link" [class.active]="i === 0" data-bs-toggle="tab" [href]="'#subitem-tab-' + subitemDef.id">
+                                        {{ subitemDef.name }}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="panel-body p-0">
+                            <div class="tab-content">
+                                <ng-container *ngFor="let subitemDef of data.evidence.subitemDefinitions; let i = index">
+                                    <div class="tab-pane fade" [class.show]="i === 0" [class.active]="i === 0" [id]="'subitem-tab-' + subitemDef.id">
+                                        <div class="p-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <div></div> <!-- Placeholder for grid title -->
+                                                <button class="btn btn-primary" (click)="addSubitem(subitemDef)">
+                                                    <i class="bi bi-plus-lg me-1"></i> Pridať položku
+                                                </button>
+                                            </div>
+
+                                            <div class="ag-theme-alpine subitem-grid">
+                                                <ag-grid-angular
+                                                    [rowData]="getSubitemRows(subitemDef.fieldName)"
+                                                    [columnDefs]="getSubitemColumnDefs(subitemDef)"
+                                                    [defaultColDef]="{ sortable: true, filter: true, resizable: true }"
+                                                    [pagination]="false"
+                                                    [domLayout]="'autoHeight'"
+                                                    [rowHeight]="40"
+                                                ></ag-grid-angular>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </ng-container>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="debug-section mt-3" *ngIf="showDebug">
+                    <pre class="debug-info">{{ debugInfo }}</pre>
                 </div>
             </div>
 
@@ -156,12 +174,22 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
             font-size: 1rem; /* Standard font size */
             padding: 0.375rem 0.75rem; /* Standard padding */
         }
-        .mat-mdc-dialog-content {
+
+        /* Content background and cards */
+        .content-background {
+            background-color: #f8f9fa;
             flex-grow: 1;
             overflow-y: auto;
             padding: 1.5rem;
-            background-color: #f8f9fa;
         }
+
+        .content-card {
+            background-color: #fff;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
         .form-container {
             padding: 0;
             overflow: visible;
@@ -275,16 +303,58 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
             max-height: 300px;
             overflow: auto;
         }
-        .content-panel {
-            background-color: #fff;
-            padding: 1.5rem;
-            border: none;
-            border-radius: 0.375rem;
-            box-shadow: none;
-            width: 100%;
-            box-sizing: border-box;
-            margin-bottom: 1.5rem;
+
+        /* Panel styling for subitems */
+        .subitems-panel {
+            display: flex;
+            flex-direction: column;
         }
+
+        .panel-header {
+            padding: 0.75rem 1rem 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .panel-body {
+            flex: 1;
+        }
+
+        .nav-tabs {
+            border-bottom: none;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            border-bottom: 2px solid transparent;
+            border-radius: 0;
+            color: #495057;
+            padding: 0.5rem 1rem;
+            margin-right: 0.5rem;
+            font-weight: 500;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #0d6efd;
+            background-color: transparent;
+            border-bottom: 2px solid #0d6efd;
+        }
+
+        .subitem-grid {
+            width: 100%;
+            min-height: 150px;
+        }
+
+        .ag-theme-alpine {
+            --ag-header-height: 40px;
+            --ag-header-foreground-color: #495057;
+            --ag-header-background-color: #f8f9fa;
+            --ag-odd-row-background-color: #fff;
+            --ag-row-hover-color: #f8f9fa;
+            --ag-selected-row-background-color: #e7f1ff;
+            --ag-font-size: 14px;
+            --ag-font-family: inherit;
+        }
+
         .tags-section {
             display: flex;
             flex-wrap: wrap;
@@ -394,25 +464,6 @@ import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-e
         }
         .detail-item:last-child {
             margin-right: 0;
-        }
-
-        .subitem-grid-container {
-            background-color: #fff;
-            border: 1px solid #dee2e6;
-            border-radius: 0.375rem;
-            padding: 1rem;
-        }
-
-        .subitem-header {
-            border-bottom: 1px solid #e9ecef;
-            padding-bottom: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .subitem-grid {
-            height: auto;
-            min-height: 150px;
-            width: 100%;
         }
     `]
 })
