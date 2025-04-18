@@ -33,10 +33,18 @@ jobs:
         run: |
           cd webapp
           npm run build
-      - name: List build output
+      - name: Debug - List build output structure
         run: |
-          cd webapp/dist/webapp
-          ls -la
+          echo "Listing webapp directory:"
+          find webapp -type f -name "index.html" | sort
+          echo "Contents of webapp/dist directory:"
+          find webapp/dist -type f | sort
+          echo "Contents of webapp/dist/webapp directory:"
+          ls -la webapp/dist/webapp/
+      - name: Fix asset paths
+        run: |
+          cp -r webapp/dist/webapp/* webapp/
+          ls -la webapp/
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -47,7 +55,6 @@ jobs:
           app_location: "./webapp"
           api_location: ""
           output_location: ""
-          app_artifact_location: "dist/webapp"
           skip_app_build: true
 
   close_pull_request_job:

@@ -25,6 +25,26 @@ jobs:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: './webapp/package-lock.json'
+      - name: Install dependencies
+        run: |
+          cd webapp
+          npm ci
+      - name: Build Angular App
+        run: |
+          cd webapp
+          npm run build
+      - name: Debug - List build output structure
+        run: |
+          echo "Listing webapp directory:"
+          find webapp -type f -name "index.html" | sort
+          echo "Contents of webapp/dist directory:"
+          find webapp/dist -type f | sort
+          echo "Contents of webapp/dist/webapp directory:"
+          ls -la webapp/dist/webapp/
+      - name: Fix asset paths
+        run: |
+          cp -r webapp/dist/webapp/* webapp/
+          ls -la webapp/
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -37,7 +57,7 @@ jobs:
           app_location: "./webapp" # App source code path
           api_location: "" # Api source code path - optional
           output_location: "" # Built app content directory - optional
-          app_artifact_location: "dist/webapp" # Built app content directory - use this instead of output_location
+          skip_app_build: true
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
