@@ -1,6 +1,6 @@
 import { Category, Evidence, EvidenceRecord } from '../models/evidence.model';
-import { Observable, from, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { Observable, Subject, from, of } from 'rxjs';
+import { map, switchMap, tap } from 'rxjs/operators';
 
 import { Injectable } from '@angular/core';
 import localforage from 'localforage';
@@ -21,6 +21,14 @@ export class EvidenceService {
     private evidenceStore: LocalForage;
     private recordsStore: LocalForage;
     private categoryStore: LocalForage;
+
+    // Subjects to notify when data changes
+    private evidenceChanged = new Subject<void>();
+    private categoryChanged = new Subject<void>();
+
+    // Observables that components can subscribe to
+    public evidenceChanged$ = this.evidenceChanged.asObservable();
+    public categoryChanged$ = this.categoryChanged.asObservable();
 
     constructor() {
         this.evidenceStore = localforage.createInstance({
@@ -63,11 +71,21 @@ export class EvidenceService {
             category.createdAt = new Date();
         }
         category.updatedAt = new Date();
-        return from(this.categoryStore.setItem(category.id, category));
+        return from(this.categoryStore.setItem(category.id, category)).pipe(
+            tap(() => {
+                // Notify subscribers that a category has been updated
+                this.categoryChanged.next();
+            })
+        );
     }
 
     deleteCategory(id: string): Observable<void> {
-        return from(this.categoryStore.removeItem(id));
+        return from(this.categoryStore.removeItem(id)).pipe(
+            tap(() => {
+                // Notify subscribers that a category has been deleted
+                this.categoryChanged.next();
+            })
+        );
     }
 
     // Evidence CRUD operations
@@ -106,11 +124,21 @@ export class EvidenceService {
             evidence.createdAt = new Date();
         }
         evidence.updatedAt = new Date();
-        return from(this.evidenceStore.setItem(evidence.id, evidence));
+        return from(this.evidenceStore.setItem(evidence.id, evidence)).pipe(
+            tap(() => {
+                // Notify subscribers that an evidence has been updated
+                this.evidenceChanged.next();
+            })
+        );
     }
 
     deleteEvidence(id: string): Observable<void> {
-        return from(this.evidenceStore.removeItem(id));
+        return from(this.evidenceStore.removeItem(id)).pipe(
+            tap(() => {
+                // Notify subscribers that an evidence has been deleted
+                this.evidenceChanged.next();
+            })
+        );
     }
 
     // Records CRUD operations

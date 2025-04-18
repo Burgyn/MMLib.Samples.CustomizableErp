@@ -346,10 +346,9 @@ export class EvidenceViewComponent implements OnInit {
         if (this.evidence && confirm(`Are you sure you want to delete "${this.evidence.name}"?`)) {
             this.evidenceService.deleteEvidence(this.evidence.id).subscribe({
                 next: () => {
-                    // Use NavigationEnd event to ensure complete page refresh
-                    this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => {
-                        this.router.navigate(['/']);
-                    });
+                    // Navigate to home without forcing a refresh
+                    // The evidenceChanged$ observable will notify subscribers
+                    this.router.navigate(['/']);
                 },
                 error: (err) => {
                     console.error('Error deleting evidence:', err);

@@ -1,7 +1,8 @@
 import { Category, Evidence } from '../../models/evidence.model';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Router, RouterModule } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 import { CategoryDialogComponent } from '../category-dialog/category-dialog.component';
 import { CommonModule } from '@angular/common';
@@ -149,8 +150,9 @@ interface MenuCategory extends Category {
         }
     `]
 })
-export class SideMenuComponent implements OnInit {
+export class SideMenuComponent implements OnInit, OnDestroy {
     categories: MenuCategory[] = [];
+    private subscriptions: Subscription = new Subscription();
 
     constructor(
         private evidenceService: EvidenceService,
@@ -160,6 +162,28 @@ export class SideMenuComponent implements OnInit {
 
     ngOnInit(): void {
         this.loadCategories();
+
+        // Subscribe to category changes
+        const categorySubscription = this.evidenceService.categoryChanged$.subscribe(() => {
+            this.loadCategories();
+        });
+
+        // Subscribe to evidence changes
+        const evidenceSubscription = this.evidenceService.evidenceChanged$.subscribe(() => {
+            // Reload evidence for each category
+            this.categories.forEach(category => {
+                this.loadEvidencesForCategory(category);
+            });
+        });
+
+        // Add subscriptions to be cleaned up on destroy
+        this.subscriptions.add(categorySubscription);
+        this.subscriptions.add(evidenceSubscription);
+    }
+
+    ngOnDestroy(): void {
+        // Clean up subscriptions
+        this.subscriptions.unsubscribe();
     }
 
     private loadCategories(): void {
@@ -172,12 +196,16 @@ export class SideMenuComponent implements OnInit {
 
             // Load evidences for each category
             this.categories.forEach(category => {
-                this.evidenceService.getEvidencesByCategory(category.id)
-                    .subscribe(evidences => {
-                        category.evidences = evidences;
-                    });
+                this.loadEvidencesForCategory(category);
             });
         });
+    }
+
+    private loadEvidencesForCategory(category: MenuCategory): void {
+        this.evidenceService.getEvidencesByCategory(category.id)
+            .subscribe(evidences => {
+                category.evidences = evidences;
+            });
     }
 
     toggleCategory(category: MenuCategory): void {
