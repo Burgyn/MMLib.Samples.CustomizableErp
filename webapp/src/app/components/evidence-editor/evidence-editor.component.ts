@@ -234,7 +234,7 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                             <label class="form-label">Odberateľ</label>
                             <select class="form-select" data-gjs-type="partner-select"></select>
                         </div>`,
-                        attributes: { 'data-gjs-type': 'partner-select' }
+                        attributes: { 'data-gjs-type': 'partner-select', 'data-gjs-displayName': 'Odberateľ' }
                     },
                     {
                         id: 'iban-select-block',
@@ -245,7 +245,7 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                             <label class="form-label">IBAN / Číslo účtu</label>
                             <select class="form-select" data-gjs-type="iban-select"></select>
                         </div>`,
-                        attributes: { 'data-gjs-type': 'iban-select' }
+                        attributes: { 'data-gjs-type': 'iban-select', 'data-gjs-displayName': 'IBAN / Číslo účtu' }
                     },
                      {
                         id: 'issue-date-block',
@@ -296,7 +296,7 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                                         <input type="date" class="form-control" data-gjs-type="due-date-date"/>
                                     </div>
                                  </div>`,
-                        attributes: { 'data-gjs-type': 'due-date' }
+                        attributes: { 'data-gjs-type': 'due-date', 'data-gjs-displayName': 'Splatnosť' }
                     },
                     {
                         id: 'currency-rate-block',
@@ -314,7 +314,7 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                                         <input type="number" class="form-control" value="1.00" step="0.01" data-gjs-type="currency-rate-rate"/>
                                     </div>
                                  </div>`,
-                         attributes: { 'data-gjs-type': 'currency-rate' }
+                         attributes: { 'data-gjs-type': 'currency-rate', 'data-gjs-displayName': 'Mena/Kurz' }
                     },
                 ]
             },
@@ -408,7 +408,7 @@ body {
                 defaults: {
                     traits: [
                         { type: 'text', name: 'name', label: 'Field Name (ID)' },
-                        { type: 'text', name: 'displayName', label: 'Display Name' },
+                        { type: 'text', name: 'displayName', label: 'Display Name', default: 'Dátum vystavenia' },
                         { type: 'checkbox', name: 'required', label: 'Required' }
                     ]
                 }
@@ -618,7 +618,7 @@ body {
                     // Override default traits if needed
                     traits: [
                         { type: 'text', name: 'name', label: 'Field Name (ID)', default: 'ibanId' },
-                        { type: 'text', name: 'displayName', label: 'Display Name', default: 'IBAN' },
+                        { type: 'text', name: 'displayName', label: 'Display Name', default: 'Číslo účtu' },
                         { type: 'checkbox', name: 'required', label: 'Required' }
                     ],
                      script: function() {
@@ -637,21 +637,16 @@ body {
              isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'due-date',
              model: {
                  defaults: {
-                     // Main traits for the composite component
                      traits: [
                          { type: 'text', name: 'name', label: 'Field Name (ID)', default: 'dueDateInfo' },
                          { type: 'text', name: 'displayName', label: 'Display Name', default: 'Splatnosť' },
                          { type: 'number', name: 'defaultDays', label: 'Default Due Days', default: 14 },
                          { type: 'checkbox', name: 'required', label: 'Required' }
                      ],
-                     // Define child components (days input, date input)
-                     // This might require adjusting the content in the block definition
-                     // to use standard GrapesJS components that can be managed here.
-                     // For simplicity now, we rely on the structure defined in the block's content.
-                      // Add script/view logic if interaction (auto-calculation) is needed.
+                     attributes: { 'data-gjs-displayName': 'Splatnosť' }
                  }
              },
-             view: { // Add view logic for interaction if required later
+             view: { // Add view logic for interaction if required
              }
         });
 

@@ -11,7 +11,7 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
             <header class="app-header">
                 <div class="brand">
                     <i class="bi bi-box"></i>
-                    <span class="ms-2">CustomizableERP</span>
+                    <span class="ms-2">Super EShop</span>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-link">
