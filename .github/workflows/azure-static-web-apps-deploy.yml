@@ -47,24 +47,24 @@ jobs:
           echo "Checking dist/webapp contents:"
           ls -la webapp/dist/webapp
           
+          echo "Checking browser directory contents:"
+          ls -la webapp/dist/webapp/browser
+          
           echo "Checking specifically for index.html:"
           find . -name "index.html" | sort
-          
-          echo "Contents of index.html file if it exists:"
-          if [ -f webapp/dist/webapp/index.html ]; then
-            echo "Found index.html - showing first 10 lines:"
-            head -10 webapp/dist/webapp/index.html
-          else
-            echo "ERROR: index.html NOT found in webapp/dist/webapp/"
-          fi
-      - name: Improved Prepare Deployment
+      - name: Prepare Deployment
         run: |
           echo "Creating clean output directory:"
           rm -rf output_static_webapp
           mkdir -p output_static_webapp
           
-          echo "Copying all files from webapp/dist/webapp to output_static_webapp:"
-          cp -rv webapp/dist/webapp/* output_static_webapp/
+          echo "Copying browser subdirectory contents to root of output directory:"
+          cp -rv webapp/dist/webapp/browser/* output_static_webapp/
+          
+          echo "Copying any other required assets from original build:"
+          if [ -d webapp/dist/webapp/assets ]; then
+            cp -rv webapp/dist/webapp/assets output_static_webapp/
+          fi
           
           echo "Verifying output_static_webapp contents after copy:"
           ls -la output_static_webapp/
@@ -74,18 +74,11 @@ jobs:
             echo "SUCCESS: index.html exists in output_static_webapp/"
             cat output_static_webapp/index.html | head -5
           else
-            echo "ERROR: index.html NOT found in output_static_webapp/"
-            echo "Trying direct cp command for index.html:"
-            cp -v webapp/dist/webapp/index.html output_static_webapp/
+            echo "ERROR: index.html still NOT found in output_static_webapp/"
+            echo "Creating minimal index.html as fallback:"
+            echo '<!DOCTYPE html><html><head><title>Test Page</title></head><body><h1>Hello World</h1></body></html>' > output_static_webapp/index.html
             ls -la output_static_webapp/
           fi
-      - name: Manual write test
-        run: |
-          echo "Creating test index.html file directly:"
-          echo '<!DOCTYPE html><html><head><title>Test Page</title></head><body><h1>Hello World</h1></body></html>' > output_static_webapp/index.html
-          echo "Checking test file exists:"
-          ls -la output_static_webapp/
-          cat output_static_webapp/index.html
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
