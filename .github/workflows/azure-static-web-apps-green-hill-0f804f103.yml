@@ -33,21 +33,59 @@ jobs:
         run: |
           cd webapp
           npm run build
-      - name: Debug - Verify index.html exists
+      - name: Enhanced Debug - Verify all files
         run: |
-          echo "Checking for built index.html file:"
+          echo "Workspace contents:"
+          ls -la
+          
+          echo "Checking webapp directory:"
+          ls -la webapp
+          
+          echo "Checking if dist exists:"
+          ls -la webapp/dist
+          
+          echo "Checking dist/webapp contents:"
+          ls -la webapp/dist/webapp
+          
+          echo "Checking specifically for index.html:"
+          find . -name "index.html" | sort
+          
+          echo "Contents of index.html file if it exists:"
           if [ -f webapp/dist/webapp/index.html ]; then
-            echo "Index.html exists in webapp/dist/webapp/"
-            cat webapp/dist/webapp/index.html | head -5
+            echo "Found index.html - showing first 10 lines:"
+            head -10 webapp/dist/webapp/index.html
           else
-            echo "ERROR: Index.html NOT found in webapp/dist/webapp/"
+            echo "ERROR: index.html NOT found in webapp/dist/webapp/"
           fi
-      - name: Prepare deployment
+      - name: Improved Prepare Deployment
         run: |
-          # Move the built files to app location
+          echo "Creating clean output directory:"
+          rm -rf output_static_webapp
           mkdir -p output_static_webapp
-          cp -r webapp/dist/webapp/* output_static_webapp/
+          
+          echo "Copying all files from webapp/dist/webapp to output_static_webapp:"
+          cp -rv webapp/dist/webapp/* output_static_webapp/
+          
+          echo "Verifying output_static_webapp contents after copy:"
           ls -la output_static_webapp/
+          
+          echo "Checking specifically for index.html in output directory:"
+          if [ -f output_static_webapp/index.html ]; then
+            echo "SUCCESS: index.html exists in output_static_webapp/"
+            cat output_static_webapp/index.html | head -5
+          else
+            echo "ERROR: index.html NOT found in output_static_webapp/"
+            echo "Trying direct cp command for index.html:"
+            cp -v webapp/dist/webapp/index.html output_static_webapp/
+            ls -la output_static_webapp/
+          fi
+      - name: Manual write test
+        run: |
+          echo "Creating test index.html file directly:"
+          echo '<!DOCTYPE html><html><head><title>Test Page</title></head><body><h1>Hello World</h1></body></html>' > output_static_webapp/index.html
+          echo "Checking test file exists:"
+          ls -la output_static_webapp/
+          cat output_static_webapp/index.html
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
