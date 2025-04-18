@@ -158,6 +158,40 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
             box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
             outline: 0;
         }
+        /* Grid layout styling for rendering GrapesJS rows and cells */
+        .record-editor-dialog .form-fields .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -0.75rem;
+            margin-left: -0.75rem;
+            margin-bottom: 1rem;
+        }
+        .record-editor-dialog .form-fields .col,
+        .record-editor-dialog .form-fields [class^="col-"] {
+            position: relative;
+            width: 100%;
+            padding-right: 0.75rem;
+            padding-left: 0.75rem;
+            box-sizing: border-box;
+        }
+        .record-editor-dialog .form-fields .gjs-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .record-editor-dialog .form-fields .gjs-cell {
+            flex: 1 0 0%;
+            padding: 0 0.75rem;
+        }
+        /* Reset margin-bottom on fields inside columns to prevent extra spacing */
+        .record-editor-dialog .form-fields .col .form-control,
+        .record-editor-dialog .form-fields .gjs-cell .form-control,
+        .record-editor-dialog .form-fields .col select,
+        .record-editor-dialog .form-fields .gjs-cell select,
+        .record-editor-dialog .form-fields .col .mb-3,
+        .record-editor-dialog .form-fields .gjs-cell .mb-3 {
+            margin-bottom: 0.75rem;
+        }
         /* Override GrapesJS block margin if needed, but prefer margin on inputs */
         .record-editor-dialog .form-fields .mb-3 {
             /* margin-bottom: 1.5rem !important; */ /* Maybe not needed if inputs have margin */
@@ -261,6 +295,33 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
         }
         .mat-mdc-dialog-actions {
             flex-shrink: 0;
+        }
+
+        /* Partner details styling */
+        .partner-details {
+            margin-bottom: 1rem !important;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        .partner-details-content {
+            padding: 0.5rem;
+            border: 1px solid #e9ecef;
+            border-radius: 0.25rem;
+            background-color: #f8f9fa;
+            margin-top: 0.25rem;
+        }
+        .detail-line {
+            margin-bottom: 0.25rem;
+        }
+        .detail-line:last-child {
+            margin-bottom: 0;
+        }
+        .detail-item {
+            display: inline-block;
+            margin-right: 1rem;
+        }
+        .detail-item:last-child {
+            margin-right: 0;
         }
     `]
 })
@@ -382,11 +443,21 @@ export class RecordEditorDialogComponent implements OnInit {
                     }
                 }
 
-                // Add classes if any
+                // Add classes from component to attributes
                 let classes = '';
                 if (comp.classes) {
                     classes = comp.classes.map((c: any) => typeof c === 'string' ? c : c.name).join(' ');
                 }
+
+                // Add special Bootstrap layout classes based on component type/name
+                if (comp.name === 'Row') {
+                    classes += ' row'; // Add Bootstrap row class
+                } else if (comp.name === 'Cell') {
+                    // For cells, add Bootstrap column classes
+                    // Default to equal width columns if width not specified
+                    classes += ' col';
+                }
+
                 if (classes) {
                     attributesObj['class'] = `${attributesObj['class'] ? attributesObj['class'] + ' ' : ''}${classes}`.trim();
                 }
@@ -459,7 +530,7 @@ export class RecordEditorDialogComponent implements OnInit {
 
                     // Generate the select tag and the details container div
                     const selectHtml = `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
-                    const detailsDivHtml = `<div class="partner-details" id="details-${attributesObj['name']}" style="margin-bottom: 1.5rem; font-size: 0.875rem; color: #6c757d;"></div>`;
+                    const detailsDivHtml = `<div class="partner-details" id="details-${attributesObj['name']}"></div>`;
                     return selectHtml + detailsDivHtml;
                 }
 
@@ -517,23 +588,24 @@ export class RecordEditorDialogComponent implements OnInit {
 
         if (selectedPartner) {
             // Format details (assuming fields like address, ico, ic_dph exist)
-            let detailsHtml = '';
+            let detailsHtml = '<div class="partner-details-content">';
             if (selectedPartner.address) {
-                detailsHtml += `<div>${this.sanitizer.sanitize(1, selectedPartner.address)}</div>`;
+                detailsHtml += `<div class="detail-line">${this.sanitizer.sanitize(1, selectedPartner.address)}</div>`;
             }
             if (selectedPartner.ico || selectedPartner.ic_dph) {
-                detailsHtml += `<div>`;
+                detailsHtml += `<div class="detail-line">`;
                 if (selectedPartner.ico) {
-                    detailsHtml += `IČO: ${this.sanitizer.sanitize(1, selectedPartner.ico)}`;
+                    detailsHtml += `<span class="detail-item">IČO: ${this.sanitizer.sanitize(1, selectedPartner.ico)}</span>`;
                 }
                 if (selectedPartner.ico && selectedPartner.ic_dph) {
-                    detailsHtml += `, `;
+                    detailsHtml += ` `;
                 }
                 if (selectedPartner.ic_dph) {
-                    detailsHtml += `IČ DPH: ${this.sanitizer.sanitize(1, selectedPartner.ic_dph)}`;
+                    detailsHtml += `<span class="detail-item">IČ DPH: ${this.sanitizer.sanitize(1, selectedPartner.ic_dph)}</span>`;
                 }
                 detailsHtml += `</div>`;
             }
+            detailsHtml += '</div>';
 
             // Use bypassSecurityTrustHtml carefully if generated HTML is complex or dynamic
             // For simple text display, sticking to sanitize might be safer if possible
