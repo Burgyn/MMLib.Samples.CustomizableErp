@@ -917,30 +917,57 @@ body {
         - Due Date - Combined number of days and date
         - Currency/Rate - For currency selection and exchange rate
 
-        IMPORTANT: Use Slovak language for all labels and display names, but keep field names in English camelCase.
+        Layout Components:
+        - 1 Column Layout - Single column of fields (default)
+        - 2 Column Layout - Two equal columns for field placement
+        - 3 Column Layout - Three equal columns for field placement
+
+        ESSENTIAL INSTRUCTIONS - MUST FOLLOW EXACTLY:
+        1. Use Slovak language for all labels and display names, but keep field names in English camelCase.
+        2. Generate a SHORT, CONCISE name for the evidence (1-2 words max) - e.g., "Faktúry", "Zamestnanci", "Mobilné telefóny"
+        3. CRITICAL: You MUST list components in the EXACT order they should appear in the form. The most important identification fields MUST be first in your JSON array.
+        4. For employee forms: firstName/name, lastName/surname, personalId/birthNumber MUST be the FIRST fields in your components array.
+        5. MUST use multi-column layout for forms with more than 5 fields (two or three columns)
+        6. Group related fields together in the same column
+
+        THE ORDER OF FIELDS IN YOUR JSON RESPONSE IS THE EXACT ORDER THEY WILL APPEAR IN THE FORM. The most important fields MUST be listed first.
 
         Your response should be valid JSON with the following structure:
         {
-          "name": "Form name in Slovak",
+          "name": "ShortName",
+          "layout": "two-column",
           "components": [
             {
               "type": "text-input|number-input|date-input|select|textarea|checkbox-input|radio-input|partner-select|etc",
               "name": "fieldNameInEnglish",
               "label": "Field Label in Slovak",
               "required": true|false,
+              "column": 1|2|3,
               "options": ["Option1 in Slovak", "Option2 in Slovak"] // Only for select, radio
             }
           ]
         }
+
+        Sample component order for an employee form:
+        1. firstName/name (column 1)
+        2. lastName/surname (column 1)
+        3. title (column 1)
+        4. personalId/birthNumber (column 1)
+        5. position (column 2)
+        6. department (column 2)
+        ... other fields ...
+
+        The "column" property indicates which column the field should be placed in for multi-column layouts.
 
         Rules:
         - Create appropriate field names in English (camelCase, no spaces)
         - Create all labels and display names in Slovak language
         - Determine which fields should be required
         - For select/dropdown fields, provide reasonable options in Slovak
-        - Order fields logically
+        - Order fields by importance (THE FIELD ORDER IN YOUR RESPONSE IS THE ORDER IN THE FORM)
         - Only include components from the available list
         - Determine the most appropriate component type for each field
+        - ALWAYS use at least two columns for complex forms
         - Respond ONLY with the JSON, no other text`;
     }
 
@@ -1013,18 +1040,96 @@ body {
             this.editor.DomComponents.clear();
         }
 
-        // Add components to the editor
-        this.addComponentsToEditor(formDefinition.components);
+        // Determine layout mode
+        const layoutMode = formDefinition.layout || 'two-column'; // Default to two-column if not specified
+
+        // Reorganize components based on priority fields
+        this.reorganizeComponentsByPriority(formDefinition.components);
+
+        // Group components by column for multi-column layouts
+        let columnGroups: {[key: string]: any[]} = {};
+
+        if (layoutMode === 'single') {
+            // For single column, put all components in column 1
+            columnGroups['1'] = formDefinition.components;
+        } else {
+            // For multi-column layouts, group by column property
+            columnGroups = formDefinition.components.reduce((groups: {[key: string]: any[]}, component: any) => {
+                const columnNumber = component.column || 1; // Default to column 1 if not specified
+                if (!groups[columnNumber]) {
+                    groups[columnNumber] = [];
+                }
+                groups[columnNumber].push(component);
+                return groups;
+            }, {});
+        }
+
+        // Create the layout and add components to their respective columns
+        this.addLayoutToEditor(layoutMode, columnGroups);
     }
 
-    private addComponentsToEditor(components: any[]): void {
+    /**
+     * Reorganizes components to ensure priority fields like name, surname are at the top
+     * regardless of how they were ordered in the AI response
+     */
+    private reorganizeComponentsByPriority(components: any[]): void {
+        // Define priority field name patterns (case-insensitive)
+        const priorityFields = [
+            /firstName|first_name|firstname|name|meno/i,
+            /lastName|last_name|lastname|surname|priezvisko/i,
+            /personalId|personal_id|birthNumber|birth_number|rodneČíslo|rodneCislo|rodne_cislo/i,
+            /title|titul/i
+        ];
+
+        // Helper function to get priority score (lower is higher priority)
+        const getPriorityScore = (comp: any): number => {
+            const name = comp.name || '';
+            for (let i = 0; i < priorityFields.length; i++) {
+                if (priorityFields[i].test(name)) {
+                    return i; // Return index as priority (0 = highest)
+                }
+            }
+            return 999; // Non-priority field
+        };
+
+        // Special handling for person-related forms - detect if it contains name/surname fields
+        const isPersonForm = components.some(comp =>
+            /firstName|last_name|meno|priezvisko/i.test(comp.name || '')
+        );
+
+        if (isPersonForm) {
+            // Sort components by priority
+            components.sort((a, b) => {
+                const priorityA = getPriorityScore(a);
+                const priorityB = getPriorityScore(b);
+
+                // If both are priority fields or both are non-priority, maintain original order within column
+                if (priorityA === priorityB) {
+                    // Sort by column first if they're in different columns
+                    return (a.column || 1) - (b.column || 1);
+                }
+
+                // Otherwise sort by priority
+                return priorityA - priorityB;
+            });
+
+            // Ensure the first 4 fields are in column 1 if they're priority fields
+            for (let i = 0; i < Math.min(4, components.length); i++) {
+                if (getPriorityScore(components[i]) < 100) { // If it's a priority field
+                    components[i].column = 1;
+                }
+            }
+        }
+    }
+
+    private addLayoutToEditor(layoutMode: string, columnGroups: {[key: string]: any[]}): void {
         if (!this.editor) return;
 
-        // Get the wrapper component to add components to
+        // Get the wrapper component
         const wrapper = this.editor.DomComponents.getWrapper();
         if (!wrapper) return;
 
-        // Add a container for the form
+        // Create a container for the form
         const formContainer = this.editor.DomComponents.addComponent({
             tagName: 'div',
             attributes: {
@@ -1033,116 +1138,295 @@ body {
             }
         }) as GrapesComponent;
 
-        // Process each component from the AI response
-        components.forEach(comp => {
-            let component: any;
+        // Function to create a column layout
+        const createColumnLayout = (columnsCount: number) => {
+            // Create a row
+            const row = this.editor?.DomComponents.addComponent({
+                name: 'Row',
+                tagName: 'div',
+                attributes: { class: 'gjs-row' }
+            }, { at: formContainer.get('components')?.length || 0 }) as GrapesComponent;
 
-            switch (comp.type) {
-                case 'text-input':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label
+            // Create columns based on count
+            for (let i = 1; i <= columnsCount; i++) {
+                const cell = this.editor?.DomComponents.addComponent({
+                    name: 'Cell',
+                    tagName: 'div',
+                    attributes: { class: 'gjs-cell' }
+                }, { at: row.get('components')?.length || 0 }) as GrapesComponent;
+
+                // Add components to this column
+                const componentsForColumn = columnGroups[i.toString()] || [];
+                componentsForColumn.forEach(comp => {
+                    this.addComponentToCell(cell, comp);
+                });
+            }
+        };
+
+        // Create the appropriate layout
+        switch (layoutMode) {
+            case 'two-column':
+                createColumnLayout(2);
+                break;
+            case 'three-column':
+                createColumnLayout(3);
+                break;
+            case 'single':
+            default:
+                // Single column layout (default)
+                createColumnLayout(1);
+                break;
+        }
+    }
+
+    private addComponentToCell(cell: GrapesComponent, comp: any): void {
+        if (!this.editor) return;
+
+        switch (comp.type) {
+            case 'text-input':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label
+                        },
+                        {
+                            tagName: 'input',
+                            attributes: {
+                                type: 'text',
+                                class: 'form-control',
+                                'data-gjs-type': 'text-input',
+                                name: comp.name,
+                                ...(comp.required ? { required: true } : {})
                             },
-                            {
-                                tagName: 'input',
-                                attributes: {
-                                    type: 'text',
-                                    class: 'form-control',
-                                    'data-gjs-type': 'text-input',
-                                    name: comp.name,
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'text-input',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name },
-                                    { type: 'text', name: 'displayName', value: comp.label },
-                                    { type: 'text', name: 'placeholder', value: '' },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                case 'number-input':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label
-                            },
-                            {
-                                tagName: 'input',
-                                attributes: {
-                                    type: 'number',
-                                    class: 'form-control',
-                                    'data-gjs-type': 'number-input',
-                                    name: comp.name,
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'number-input',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name },
-                                    { type: 'text', name: 'displayName', value: comp.label },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                case 'date-input':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label
-                            },
-                            {
-                                tagName: 'input',
-                                attributes: {
-                                    type: 'date',
-                                    class: 'form-control',
-                                    'data-gjs-type': 'date-input',
-                                    name: comp.name,
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'date-input',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name },
-                                    { type: 'text', name: 'displayName', value: comp.label },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                case 'select':
-                    const selectOptions = [];
-
-                    if (comp.options && Array.isArray(comp.options)) {
-                        for (const opt of comp.options) {
-                            selectOptions.push({
-                                tagName: 'option',
-                                attributes: { value: opt.toLowerCase().replace(/\s+/g, '_') },
-                                content: opt
-                            });
+                            type: 'text-input',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name },
+                                { type: 'text', name: 'displayName', value: comp.label },
+                                { type: 'text', name: 'placeholder', value: '' },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
+                            ]
                         }
-                    }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
 
-                    const selectComponents = [
+            case 'number-input':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label
+                        },
+                        {
+                            tagName: 'input',
+                            attributes: {
+                                type: 'number',
+                                class: 'form-control',
+                                'data-gjs-type': 'number-input',
+                                name: comp.name,
+                                ...(comp.required ? { required: true } : {})
+                            },
+                            type: 'number-input',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name },
+                                { type: 'text', name: 'displayName', value: comp.label },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
+                            ]
+                        }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
+
+            case 'date-input':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label
+                        },
+                        {
+                            tagName: 'input',
+                            attributes: {
+                                type: 'date',
+                                class: 'form-control',
+                                'data-gjs-type': 'date-input',
+                                name: comp.name,
+                                ...(comp.required ? { required: true } : {})
+                            },
+                            type: 'date-input',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name },
+                                { type: 'text', name: 'displayName', value: comp.label },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
+                            ]
+                        }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
+
+            case 'select':
+                const selectOptions = [];
+
+                if (comp.options && Array.isArray(comp.options)) {
+                    for (const opt of comp.options) {
+                        selectOptions.push({
+                            tagName: 'option',
+                            attributes: { value: opt.toLowerCase().replace(/\s+/g, '_') },
+                            content: opt
+                        });
+                    }
+                }
+
+                const selectComponents = [
+                    {
+                        tagName: 'label',
+                        attributes: { class: 'form-label' },
+                        content: comp.label
+                    },
+                    {
+                        tagName: 'select',
+                        attributes: {
+                            class: 'form-select',
+                            'data-gjs-type': 'select',
+                            name: comp.name,
+                            ...(comp.required ? { required: true } : {})
+                        },
+                        type: 'select',
+                        traits: [
+                            { type: 'text', name: 'name', value: comp.name },
+                            { type: 'text', name: 'displayName', value: comp.label },
+                            { type: 'checkbox', name: 'required', value: comp.required || false }
+                        ],
+                        components: [
+                            {
+                                tagName: 'option',
+                                attributes: { value: '' },
+                                content: `Select ${comp.label}`
+                            },
+                            ...selectOptions
+                        ]
+                    }
+                ];
+
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: selectComponents
+                }, { at: cell.get('components')?.length || 0 });
+                break;
+
+            case 'textarea':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label
+                        },
+                        {
+                            tagName: 'textarea',
+                            attributes: {
+                                class: 'form-control',
+                                'data-gjs-type': 'textarea',
+                                name: comp.name,
+                                ...(comp.required ? { required: true } : {})
+                            },
+                            type: 'textarea',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name },
+                                { type: 'text', name: 'displayName', value: comp.label },
+                                { type: 'text', name: 'placeholder', value: '' },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
+                            ]
+                        }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
+
+            case 'checkbox-input':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'form-check mb-3' },
+                    components: [
+                        {
+                            tagName: 'input',
+                            attributes: {
+                                class: 'form-check-input',
+                                type: 'checkbox',
+                                'data-gjs-type': 'checkbox-input',
+                                name: comp.name,
+                                ...(comp.required ? { required: true } : {})
+                            },
+                            type: 'checkbox-input',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name },
+                                { type: 'text', name: 'displayName', value: comp.label },
+                                { type: 'text', name: 'value', value: 'true' },
+                                { type: 'text', name: 'label', value: comp.label },
+                                { type: 'checkbox', name: 'required', value: comp.required || false },
+                                { type: 'checkbox', name: 'checked', value: false }
+                            ]
+                        },
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-check-label' },
+                            content: comp.label
+                        }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
+
+            case 'radio-input':
+                if (comp.options && Array.isArray(comp.options)) {
+                    // Create radio buttons as HTML instead of nested components
+                    let radioHtml = `<div class="mb-3">
+                        <label class="form-label d-block">${comp.label}</label>`;
+
+                    comp.options.forEach((opt: string, idx: number) => {
+                        const optValue = opt.toLowerCase().replace(/\s+/g, '_');
+                        const optId = `${comp.name}_${idx}`;
+                        const requiredAttr = idx === 0 && comp.required ? 'required' : '';
+
+                        radioHtml += `
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio"
+                                id="${optId}" name="${comp.name}" value="${optValue}"
+                                data-gjs-type="radio-input" ${requiredAttr}>
+                            <label class="form-check-label" for="${optId}">${opt}</label>
+                        </div>`;
+                    });
+
+                    radioHtml += `</div>`;
+
+                    // Add entire radio group as a single component with HTML
+                    this.editor?.DomComponents.addComponent({
+                        type: 'text',
+                        content: radioHtml,
+                        traits: [
+                            { type: 'text', name: 'name', value: comp.name },
+                            { type: 'text', name: 'displayName', value: comp.label }
+                        ]
+                    }, { at: cell.get('components')?.length || 0 });
+                }
+                break;
+
+            case 'partner-select':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
                         {
                             tagName: 'label',
                             attributes: { class: 'form-label' },
@@ -1152,449 +1436,309 @@ body {
                             tagName: 'select',
                             attributes: {
                                 class: 'form-select',
-                                'data-gjs-type': 'select',
+                                'data-gjs-type': 'partner-select',
                                 name: comp.name,
+                                ...(comp.required ? { required: true } : {})
+                            },
+                            type: 'partner-select',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name },
+                                { type: 'text', name: 'displayName', value: comp.label },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
+                            ]
+                        }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
+
+            // Handle special economic fields
+            case 'iban-select':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label || 'IBAN / Číslo účtu'
+                        },
+                        {
+                            tagName: 'select',
+                            attributes: {
+                                class: 'form-select',
+                                'data-gjs-type': 'select',
+                                name: comp.name || 'ibanId',
                                 ...(comp.required ? { required: true } : {})
                             },
                             type: 'select',
                             traits: [
-                                { type: 'text', name: 'name', value: comp.name },
-                                { type: 'text', name: 'displayName', value: comp.label },
+                                { type: 'text', name: 'name', value: comp.name || 'ibanId' },
+                                { type: 'text', name: 'displayName', value: comp.label || 'IBAN / Číslo účtu' },
                                 { type: 'checkbox', name: 'required', value: comp.required || false }
                             ],
                             components: [
                                 {
                                     tagName: 'option',
                                     attributes: { value: '' },
-                                    content: `Select ${comp.label}`
+                                    content: 'Vyberte IBAN...'
                                 },
-                                ...selectOptions
+                                {
+                                    tagName: 'option',
+                                    attributes: { value: '1' },
+                                    content: 'SK1234567890123456789012'
+                                },
+                                {
+                                    tagName: 'option',
+                                    attributes: { value: '2' },
+                                    content: 'SK9876543210987654321098'
+                                }
                             ]
                         }
-                    ];
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
 
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: selectComponents
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                case 'textarea':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label
+            case 'issue-date':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label || 'Dátum vystavenia'
+                        },
+                        {
+                            tagName: 'input',
+                            attributes: {
+                                type: 'date',
+                                class: 'form-control',
+                                'data-gjs-type': 'date-input',
+                                name: comp.name || 'issueDate',
+                                ...(comp.required ? { required: true } : {})
                             },
-                            {
-                                tagName: 'textarea',
-                                attributes: {
-                                    class: 'form-control',
-                                    'data-gjs-type': 'textarea',
-                                    name: comp.name,
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'textarea',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name },
-                                    { type: 'text', name: 'displayName', value: comp.label },
-                                    { type: 'text', name: 'placeholder', value: '' },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
+                            type: 'date-input',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name || 'issueDate' },
+                                { type: 'text', name: 'displayName', value: comp.label || 'Dátum vystavenia' },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
+                            ]
+                        }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
 
-                case 'checkbox-input':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'form-check mb-3' },
-                        components: [
-                            {
-                                tagName: 'input',
-                                attributes: {
-                                    class: 'form-check-input',
-                                    type: 'checkbox',
-                                    'data-gjs-type': 'checkbox-input',
-                                    name: comp.name,
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'checkbox-input',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name },
-                                    { type: 'text', name: 'displayName', value: comp.label },
-                                    { type: 'text', name: 'value', value: 'true' },
-                                    { type: 'text', name: 'label', value: comp.label },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false },
-                                    { type: 'checkbox', name: 'checked', value: false }
-                                ]
+            case 'variable-symbol':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label || 'Variabilný symbol'
+                        },
+                        {
+                            tagName: 'input',
+                            attributes: {
+                                type: 'text',
+                                class: 'form-control',
+                                'data-gjs-type': 'text-input',
+                                name: comp.name || 'variableSymbol',
+                                ...(comp.required ? { required: true } : {})
                             },
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-check-label' },
-                                content: comp.label
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
+                            type: 'text-input',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name || 'variableSymbol' },
+                                { type: 'text', name: 'displayName', value: comp.label || 'Variabilný symbol' },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
+                            ]
+                        }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
 
-                case 'radio-input':
-                    if (comp.options && Array.isArray(comp.options)) {
-                        // Create radio buttons as HTML instead of nested components
-                        let radioHtml = `<div class="mb-3">
-                            <label class="form-label d-block">${comp.label}</label>`;
+            case 'payment-method':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label || 'Spôsob úhrady'
+                        },
+                        {
+                            tagName: 'select',
+                            attributes: {
+                                class: 'form-select',
+                                'data-gjs-type': 'select',
+                                name: comp.name || 'paymentMethod',
+                                ...(comp.required ? { required: true } : {})
+                            },
+                            type: 'select',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name || 'paymentMethod' },
+                                { type: 'text', name: 'displayName', value: comp.label || 'Spôsob úhrady' },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
+                            ],
+                            components: [
+                                {
+                                    tagName: 'option',
+                                    attributes: { value: 'cash' },
+                                    content: 'Hotovosť'
+                                },
+                                {
+                                    tagName: 'option',
+                                    attributes: { value: 'online' },
+                                    content: 'Online platba'
+                                },
+                                {
+                                    tagName: 'option',
+                                    attributes: { value: 'cod' },
+                                    content: 'Dobierka'
+                                }
+                            ]
+                        }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
 
-                        comp.options.forEach((opt: string, idx: number) => {
-                            const optValue = opt.toLowerCase().replace(/\s+/g, '_');
-                            const optId = `${comp.name}_${idx}`;
-                            const requiredAttr = idx === 0 && comp.required ? 'required' : '';
+            case 'due-date':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label || 'Splatnosť'
+                        },
+                        {
+                            tagName: 'div',
+                            attributes: { class: 'input-group' },
+                            components: [
+                                {
+                                    tagName: 'input',
+                                    attributes: {
+                                        type: 'number',
+                                        class: 'form-control',
+                                        placeholder: 'Dní',
+                                        'data-gjs-type': 'due-date-days'
+                                    }
+                                },
+                                {
+                                    tagName: 'input',
+                                    attributes: {
+                                        type: 'date',
+                                        class: 'form-control',
+                                        'data-gjs-type': 'due-date-date'
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    type: 'due-date',
+                    traits: [
+                        { type: 'text', name: 'name', value: comp.name || 'dueDateInfo' },
+                        { type: 'text', name: 'displayName', value: comp.label || 'Splatnosť' },
+                        { type: 'number', name: 'defaultDays', value: 14 },
+                        { type: 'checkbox', name: 'required', value: comp.required || false }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
 
-                            radioHtml += `
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio"
-                                    id="${optId}" name="${comp.name}" value="${optValue}"
-                                    data-gjs-type="radio-input" ${requiredAttr}>
-                                <label class="form-check-label" for="${optId}">${opt}</label>
-                            </div>`;
-                        });
+            case 'currency-rate':
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label || 'Mena / Kurz'
+                        },
+                        {
+                            tagName: 'div',
+                            attributes: { class: 'input-group' },
+                            components: [
+                                {
+                                    tagName: 'select',
+                                    attributes: {
+                                        class: 'form-select',
+                                        style: 'flex: 0 0 auto; width: auto;',
+                                        'data-gjs-type': 'currency-rate-currency'
+                                    },
+                                    components: [
+                                        {
+                                            tagName: 'option',
+                                            attributes: { value: 'EUR' },
+                                            content: 'EUR'
+                                        },
+                                        {
+                                            tagName: 'option',
+                                            attributes: { value: 'CZK' },
+                                            content: 'CZK'
+                                        },
+                                        {
+                                            tagName: 'option',
+                                            attributes: { value: 'USD' },
+                                            content: 'USD'
+                                        }
+                                    ]
+                                },
+                                {
+                                    tagName: 'input',
+                                    attributes: {
+                                        type: 'number',
+                                        class: 'form-control',
+                                        value: '1.00',
+                                        step: '0.01',
+                                        'data-gjs-type': 'currency-rate-rate'
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    type: 'currency-rate',
+                    traits: [
+                        { type: 'text', name: 'name', value: comp.name || 'currencyRateInfo' },
+                        { type: 'text', name: 'displayName', value: comp.label || 'Mena/Kurz' },
+                        { type: 'select', name: 'defaultCurrency', value: 'EUR' },
+                        { type: 'checkbox', name: 'required', value: comp.required || false }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+                break;
 
-                        radioHtml += `</div>`;
-
-                        // Add entire radio group as a single component with HTML
-                        component = this.editor?.DomComponents.addComponent({
-                            type: 'text',
-                            content: radioHtml,
+            default:
+                // For unrecognized types, default to text input
+                this.editor?.DomComponents.addComponent({
+                    tagName: 'div',
+                    attributes: { class: 'mb-3' },
+                    components: [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label
+                        },
+                        {
+                            tagName: 'input',
+                            attributes: {
+                                type: 'text',
+                                class: 'form-control',
+                                'data-gjs-type': 'text-input',
+                                name: comp.name,
+                                ...(comp.required ? { required: true } : {})
+                            },
+                            type: 'text-input',
                             traits: [
                                 { type: 'text', name: 'name', value: comp.name },
-                                { type: 'text', name: 'displayName', value: comp.label }
+                                { type: 'text', name: 'displayName', value: comp.label },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
                             ]
-                        }, { at: formContainer.get('components')?.length || 0 });
-                    }
-                    break;
-
-                case 'partner-select':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label
-                            },
-                            {
-                                tagName: 'select',
-                                attributes: {
-                                    class: 'form-select',
-                                    'data-gjs-type': 'partner-select',
-                                    name: comp.name,
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'partner-select',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name },
-                                    { type: 'text', name: 'displayName', value: comp.label },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                // Handle special economic fields
-                case 'iban-select':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label || 'IBAN / Číslo účtu'
-                            },
-                            {
-                                tagName: 'select',
-                                attributes: {
-                                    class: 'form-select',
-                                    'data-gjs-type': 'select',
-                                    name: comp.name || 'ibanId',
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'select',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name || 'ibanId' },
-                                    { type: 'text', name: 'displayName', value: comp.label || 'IBAN / Číslo účtu' },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ],
-                                components: [
-                                    {
-                                        tagName: 'option',
-                                        attributes: { value: '' },
-                                        content: 'Vyberte IBAN...'
-                                    },
-                                    {
-                                        tagName: 'option',
-                                        attributes: { value: '1' },
-                                        content: 'SK1234567890123456789012'
-                                    },
-                                    {
-                                        tagName: 'option',
-                                        attributes: { value: '2' },
-                                        content: 'SK9876543210987654321098'
-                                    }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                case 'issue-date':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label || 'Dátum vystavenia'
-                            },
-                            {
-                                tagName: 'input',
-                                attributes: {
-                                    type: 'date',
-                                    class: 'form-control',
-                                    'data-gjs-type': 'date-input',
-                                    name: comp.name || 'issueDate',
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'date-input',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name || 'issueDate' },
-                                    { type: 'text', name: 'displayName', value: comp.label || 'Dátum vystavenia' },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                case 'variable-symbol':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label || 'Variabilný symbol'
-                            },
-                            {
-                                tagName: 'input',
-                                attributes: {
-                                    type: 'text',
-                                    class: 'form-control',
-                                    'data-gjs-type': 'text-input',
-                                    name: comp.name || 'variableSymbol',
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'text-input',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name || 'variableSymbol' },
-                                    { type: 'text', name: 'displayName', value: comp.label || 'Variabilný symbol' },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                case 'payment-method':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label || 'Spôsob úhrady'
-                            },
-                            {
-                                tagName: 'select',
-                                attributes: {
-                                    class: 'form-select',
-                                    'data-gjs-type': 'select',
-                                    name: comp.name || 'paymentMethod',
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'select',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name || 'paymentMethod' },
-                                    { type: 'text', name: 'displayName', value: comp.label || 'Spôsob úhrady' },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ],
-                                components: [
-                                    {
-                                        tagName: 'option',
-                                        attributes: { value: 'cash' },
-                                        content: 'Hotovosť'
-                                    },
-                                    {
-                                        tagName: 'option',
-                                        attributes: { value: 'online' },
-                                        content: 'Online platba'
-                                    },
-                                    {
-                                        tagName: 'option',
-                                        attributes: { value: 'cod' },
-                                        content: 'Dobierka'
-                                    }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                case 'due-date':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label || 'Splatnosť'
-                            },
-                            {
-                                tagName: 'div',
-                                attributes: { class: 'input-group' },
-                                components: [
-                                    {
-                                        tagName: 'input',
-                                        attributes: {
-                                            type: 'number',
-                                            class: 'form-control',
-                                            placeholder: 'Dní',
-                                            'data-gjs-type': 'due-date-days'
-                                        }
-                                    },
-                                    {
-                                        tagName: 'input',
-                                        attributes: {
-                                            type: 'date',
-                                            class: 'form-control',
-                                            'data-gjs-type': 'due-date-date'
-                                        }
-                                    }
-                                ]
-                            }
-                        ],
-                        type: 'due-date',
-                        traits: [
-                            { type: 'text', name: 'name', value: comp.name || 'dueDateInfo' },
-                            { type: 'text', name: 'displayName', value: comp.label || 'Splatnosť' },
-                            { type: 'number', name: 'defaultDays', value: 14 },
-                            { type: 'checkbox', name: 'required', value: comp.required || false }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                case 'currency-rate':
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label || 'Mena / Kurz'
-                            },
-                            {
-                                tagName: 'div',
-                                attributes: { class: 'input-group' },
-                                components: [
-                                    {
-                                        tagName: 'select',
-                                        attributes: {
-                                            class: 'form-select',
-                                            style: 'flex: 0 0 auto; width: auto;',
-                                            'data-gjs-type': 'currency-rate-currency'
-                                        },
-                                        components: [
-                                            {
-                                                tagName: 'option',
-                                                attributes: { value: 'EUR' },
-                                                content: 'EUR'
-                                            },
-                                            {
-                                                tagName: 'option',
-                                                attributes: { value: 'CZK' },
-                                                content: 'CZK'
-                                            },
-                                            {
-                                                tagName: 'option',
-                                                attributes: { value: 'USD' },
-                                                content: 'USD'
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        tagName: 'input',
-                                        attributes: {
-                                            type: 'number',
-                                            class: 'form-control',
-                                            value: '1.00',
-                                            step: '0.01',
-                                            'data-gjs-type': 'currency-rate-rate'
-                                        }
-                                    }
-                                ]
-                            }
-                        ],
-                        type: 'currency-rate',
-                        traits: [
-                            { type: 'text', name: 'name', value: comp.name || 'currencyRateInfo' },
-                            { type: 'text', name: 'displayName', value: comp.label || 'Mena/Kurz' },
-                            { type: 'select', name: 'defaultCurrency', value: 'EUR' },
-                            { type: 'checkbox', name: 'required', value: comp.required || false }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-                    break;
-
-                default:
-                    // For unrecognized types, default to text input
-                    component = this.editor?.DomComponents.addComponent({
-                        tagName: 'div',
-                        attributes: { class: 'mb-3' },
-                        components: [
-                            {
-                                tagName: 'label',
-                                attributes: { class: 'form-label' },
-                                content: comp.label
-                            },
-                            {
-                                tagName: 'input',
-                                attributes: {
-                                    type: 'text',
-                                    class: 'form-control',
-                                    'data-gjs-type': 'text-input',
-                                    name: comp.name,
-                                    ...(comp.required ? { required: true } : {})
-                                },
-                                type: 'text-input',
-                                traits: [
-                                    { type: 'text', name: 'name', value: comp.name },
-                                    { type: 'text', name: 'displayName', value: comp.label },
-                                    { type: 'checkbox', name: 'required', value: comp.required || false }
-                                ]
-                            }
-                        ]
-                    }, { at: formContainer.get('components')?.length || 0 });
-            }
-        });
+                        }
+                    ]
+                }, { at: cell.get('components')?.length || 0 });
+        }
     }
 }
