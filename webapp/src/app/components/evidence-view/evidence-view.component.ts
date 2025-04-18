@@ -215,6 +215,16 @@ export class EvidenceViewComponent implements OnInit {
             pinned: 'left'
         }];
 
+        // Add document number column
+        this.columnDefs.push({
+            field: 'documentNumber',
+            headerName: 'Číslo',
+            sortable: true,
+            filter: true,
+            width: 120,
+            pinned: 'left'
+        });
+
         // Add data columns
         this.columnDefs.push(...evidence.gridColumns.map(col => {
             const colDef: ColDef = {
