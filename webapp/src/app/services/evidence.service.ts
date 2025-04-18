@@ -1,4 +1,5 @@
 import { Category, Evidence, EvidenceRecord } from '../models/evidence.model';
+import { GridColumn, SubitemRecord } from '../models/evidence.model';
 import { Observable, Subject, forkJoin, from, of } from 'rxjs';
 import { map, switchMap, tap } from 'rxjs/operators';
 
@@ -304,5 +305,82 @@ export class EvidenceService {
             { id: 'iban3', value: 'SK77 1100 0000 0011 2233 4455' }
         ];
         return of(mockIbans);
+    }
+
+    /**
+     * Processes calculated fields in subitem records
+     * @param records The subitem records to process
+     * @param columns The grid columns with formula definitions
+     * @returns The processed records with calculated fields
+     */
+    processCalculatedFields(records: SubitemRecord[], columns: GridColumn[]): SubitemRecord[] {
+        if (!records || !columns) return records;
+
+        // Find columns with formulas
+        const calculatedColumns = columns.filter(col => col.isCalculated && col.formula);
+        if (calculatedColumns.length === 0) return records;
+
+        // Process each record
+        return records.map(record => {
+            const newRecord = { ...record };
+
+            // Process each calculated column
+            calculatedColumns.forEach(column => {
+                try {
+                    // Create a function that evaluates the formula using record data
+                    newRecord.data[column.field] = this.evaluateFormula(column.formula!, newRecord.data);
+                } catch (error) {
+                    console.error(`Error calculating formula for field ${column.field}:`, error);
+                    // Set a default value on error
+                    newRecord.data[column.field] = 0;
+                }
+            });
+
+            return newRecord;
+        });
+    }
+
+    /**
+     * Evaluates a formula expression using record data
+     * @param formula The formula expression
+     * @param data The record data
+     * @returns The calculated value
+     */
+    evaluateFormula(formula: string, data: any): number {
+        // Replace field references with actual values
+        let processedFormula = formula;
+
+        // Create a regex to match field names
+        // This assumes field names are alphanumeric plus underscores
+        const fieldPattern = /[a-zA-Z_][a-zA-Z0-9_]*/g;
+
+        // Replace all field references with their values
+        processedFormula = processedFormula.replace(fieldPattern, (match) => {
+            // Check if the match is a field in the data
+            if (match in data) {
+                const value = data[match];
+                // Convert to number if possible, or use 0
+                const numValue = Number(value);
+                return isNaN(numValue) ? '0' : numValue.toString();
+            }
+            // If not found, return 0
+            return '0';
+        });
+
+        // Use Function constructor to evaluate the expression
+        // Note: This has security implications if the formula comes from untrusted sources
+        try {
+            // Replace single = with == to avoid accidental assignments
+            processedFormula = processedFormula.replace(/([^=!><])=([^=])/g, '$1==$2');
+
+            // Create and execute a function that returns the evaluated expression
+            const func = new Function(`return ${processedFormula}`);
+            const result = func();
+
+            return typeof result === 'number' ? result : 0;
+        } catch (error) {
+            console.error('Error evaluating formula:', error);
+            return 0;
+        }
     }
 }

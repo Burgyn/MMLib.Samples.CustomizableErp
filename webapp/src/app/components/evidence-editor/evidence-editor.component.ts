@@ -1,3 +1,5 @@
+import * as bootstrap from 'bootstrap';
+
 import { ActivatedRoute, Router } from '@angular/router';
 import { Category, Evidence, GridColumn, SubitemDefinition } from '../../models/evidence.model';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
@@ -11,7 +13,6 @@ import grapesjs from 'grapesjs';
 import grapesjsBlocksBasic from 'grapesjs-blocks-basic';
 import grapesjsPluginForms from 'grapesjs-plugin-forms';
 import grapesjsPresetWebpage from 'grapesjs-preset-webpage';
-import * as bootstrap from 'bootstrap';
 
 // Define interfaces for dummy data if not already defined elsewhere
 interface Partner { id: string; name: string; }
@@ -160,6 +161,7 @@ interface Iban { id: string; value: string; }
                                             <th>Header Name</th>
                                             <th>Type</th>
                                             <th>Width</th>
+                                            <th>Calculated</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -183,13 +185,21 @@ interface Iban { id: string; value: string; }
                                                 <input type="number" class="form-control form-control-sm" [(ngModel)]="column.width" placeholder="Width">
                                             </td>
                                             <td>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" [(ngModel)]="column.isCalculated" (change)="onCalculatedChange(column)">
+                                                </div>
+                                            </td>
+                                            <td>
                                                 <button class="btn btn-sm btn-outline-danger" (click)="removeColumn(i)">
                                                     <i class="bi bi-trash"></i>
+                                                </button>
+                                                <button *ngIf="column.isCalculated" class="btn btn-sm btn-outline-primary ms-1" (click)="showFormulaEditor(i)">
+                                                    <i class="bi bi-calculator"></i>
                                                 </button>
                                             </td>
                                         </tr>
                                         <tr *ngIf="currentSubitem.columns.length === 0">
-                                            <td colspan="5" class="text-center text-muted">No columns defined</td>
+                                            <td colspan="6" class="text-center text-muted">No columns defined</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -213,6 +223,60 @@ interface Iban { id: string; value: string; }
                 </div>
             </div>
         </div>
+
+        <!-- Formula Editor Dialog -->
+        <div class="modal fade" id="formulaDialog" tabindex="-1" aria-labelledby="formulaDialogLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-dialog-scrollable modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="formulaDialogLabel">Formula Editor</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="formulaExpression" class="form-label">Formula Expression</label>
+                            <textarea class="form-control" id="formulaExpression" rows="3" [(ngModel)]="formulaExpression" placeholder="Enter formula expression"></textarea>
+                            <div class="form-text">Create a formula using field names and operators. Example: unitPrice * quantity</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Available Fields</label>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <button *ngFor="let col of getAvailableFieldsForFormula()"
+                                     class="btn btn-sm btn-outline-secondary formula-button formula-field-button"
+                                     (click)="addFieldToFormula(col.field)">
+                                     {{ col.headerName || col.field }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Operators</label>
+                            <div class="d-flex flex-wrap gap-1">
+                                <button *ngFor="let op of availableOperators"
+                                     class="btn btn-sm btn-outline-secondary formula-button formula-operator-button"
+                                     (click)="addOperatorToFormula(op)">
+                                     {{ op }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <strong>Tips:</strong>
+                            <ul class="mb-0">
+                                <li>Use mathematical operators like +, -, *, / for calculations</li>
+                                <li>Use parentheses () to group expressions</li>
+                                <li>Example: (unitPrice * quantity) - discount</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" (click)="cancelFormula()">Cancel</button>
+                        <button type="button" class="btn btn-primary" (click)="saveFormula()">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     `,
     styles: [`
         .editor-container {
@@ -228,6 +292,22 @@ interface Iban { id: string; value: string; }
 
         .toolbar {
             background: #fff;
+        }
+
+        /* Formula editor styles */
+        .formula-button {
+            margin: 2px;
+            min-width: 36px;
+        }
+
+        .formula-field-button {
+            background-color: #e9f5ff;
+            border-color: #b8d8f8;
+        }
+
+        .formula-operator-button {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
         }
 
         :host ::ng-deep {
@@ -285,6 +365,10 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
         columns: []
     };
     private subitemDialog: any; // Will hold the Bootstrap modal reference
+    private formulaDialog: any; // Will hold the Bootstrap modal reference for formula editor
+    currentFormulaColumnIndex: number = -1;
+    availableOperators: string[] = ['+', '-', '*', '/', '(', ')', '&&', '||', '>', '<', '>=', '<=', '==', '!='];
+    formulaExpression: string = '';
 
     constructor(
         private fb: FormBuilder,
@@ -1086,7 +1170,7 @@ body {
         3. CRITICAL: You MUST list components in the EXACT order they should appear in the form. The most important identification fields MUST be first in your JSON array.
         4. For employee forms: firstName/name, lastName/surname, personalId/birthNumber MUST be the FIRST fields in your components array.
         5. MUST use multi-column layout for forms with more than 5 fields (two or three columns)
-        6. Group related fields together in the same column
+        - Group related fields together in the same column
 
         THE ORDER OF FIELDS IN YOUR JSON RESPONSE IS THE EXACT ORDER THEY WILL APPEAR IN THE FORM. The most important fields MUST be listed first.
 
@@ -1731,5 +1815,136 @@ body {
             fieldName: '',
             columns: []
         };
+    }
+
+    /**
+     * Called when the calculated checkbox is toggled
+     */
+    onCalculatedChange(column: GridColumn): void {
+        if (column.isCalculated) {
+            // Initialize formula fields if this is a new calculated field
+            if (!column.formula) {
+                column.formula = '';
+                column.formulaFields = [];
+            }
+
+            // If it's a calculated field, ensure it's a number type
+            if (column.type !== 'number') {
+                column.type = 'number';
+            }
+        } else {
+            // Clear formula when unchecking the calculated option
+            column.formula = undefined;
+            column.formulaFields = undefined;
+        }
+    }
+
+    /**
+     * Opens the formula editor for a specific column
+     */
+    showFormulaEditor(columnIndex: number): void {
+        if (columnIndex < 0 || columnIndex >= this.currentSubitem.columns.length) return;
+
+        this.currentFormulaColumnIndex = columnIndex;
+        const column = this.currentSubitem.columns[columnIndex];
+        this.formulaExpression = column.formula || '';
+
+        // Initialize the Bootstrap modal if not already done
+        if (!this.formulaDialog) {
+            const dialogElement = document.getElementById('formulaDialog');
+            if (dialogElement) {
+                this.formulaDialog = new bootstrap.Modal(dialogElement);
+            }
+        }
+
+        // Show the dialog
+        if (this.formulaDialog) {
+            this.formulaDialog.show();
+        }
+    }
+
+    /**
+     * Adds a field reference to the formula expression
+     */
+    addFieldToFormula(fieldName: string): void {
+        this.formulaExpression += ` ${fieldName} `;
+    }
+
+    /**
+     * Adds an operator to the formula expression
+     */
+    addOperatorToFormula(operator: string): void {
+        this.formulaExpression += ` ${operator} `;
+    }
+
+    /**
+     * Saves the formula for the current column
+     */
+    saveFormula(): void {
+        if (this.currentFormulaColumnIndex < 0) return;
+
+        const column = this.currentSubitem.columns[this.currentFormulaColumnIndex];
+        column.formula = this.formulaExpression.trim();
+
+        // Extract field names from the formula
+        column.formulaFields = this.extractFieldsFromFormula(column.formula);
+
+        // Close the dialog
+        if (this.formulaDialog) {
+            this.formulaDialog.hide();
+        }
+    }
+
+    /**
+     * Cancels the formula editing
+     */
+    cancelFormula(): void {
+        this.currentFormulaColumnIndex = -1;
+        this.formulaExpression = '';
+
+        if (this.formulaDialog) {
+            this.formulaDialog.hide();
+        }
+    }
+
+    /**
+     * Extracts field names from a formula expression
+     */
+    private extractFieldsFromFormula(formula: string): string[] {
+        if (!formula) return [];
+
+        const fields = new Set<string>();
+
+        // Split by operators and parentheses and filter out operators
+        const operators = ['+', '-', '*', '/', '(', ')', '&&', '||', '>', '<', '>=', '<=', '==', '!='];
+        let tempFormula = formula;
+
+        // Replace operators with spaces to help with splitting
+        operators.forEach(op => {
+            tempFormula = tempFormula.split(op).join(' ');
+        });
+
+        // Split by spaces and filter out empty strings and numbers
+        const tokens = tempFormula.split(' ')
+            .map(t => t.trim())
+            .filter(t => t && !t.match(/^[0-9.]+$/) && !operators.includes(t));
+
+        // Add unique field names to the set
+        tokens.forEach(token => {
+            // Check if the token is a field name in the current subitem
+            const isFieldName = this.currentSubitem.columns.some(col => col.field === token);
+            if (isFieldName) {
+                fields.add(token);
+            }
+        });
+
+        return Array.from(fields);
+    }
+
+    /**
+     * Gets available fields that can be used in formulas
+     */
+    getAvailableFieldsForFormula(): GridColumn[] {
+        return this.currentSubitem.columns.filter(col => col.field && col.headerName);
     }
 }

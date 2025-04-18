@@ -35,6 +35,9 @@ export interface GridColumn {
     width?: number;
     sortable?: boolean;
     filter?: boolean;
+    isCalculated?: boolean;
+    formula?: string;
+    formulaFields?: string[];
 }
 
 export interface EvidenceRecord {

@@ -6,6 +6,7 @@ import { Evidence, EvidenceRecord, SubitemDefinition, SubitemRecord } from '../.
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { AgGridModule } from 'ag-grid-angular';
 import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-editor-dialog.component';
+import { EvidenceService } from '../../services/evidence.service';
 
 @Component({
     selector: 'app-record-editor-dialog',
@@ -624,6 +625,7 @@ export class RecordEditorDialogComponent implements OnInit {
         private sanitizer: DomSanitizer,
         private dialogRef: MatDialogRef<RecordEditorDialogComponent>,
         private dialog: MatDialog,
+        private evidenceService: EvidenceService,
         @Inject(MAT_DIALOG_DATA) public data: {
             evidence: Evidence;
             record?: EvidenceRecord;
@@ -924,10 +926,8 @@ export class RecordEditorDialogComponent implements OnInit {
             });
         });
 
-        // Initialize subitems if editing an existing record
-        if (this.data.mode === 'edit' && this.data.record && this.data.record.subitems) {
-            this.subitems = { ...this.data.record.subitems };
-        }
+        // Initialize subitems from the record if in edit mode
+        this.initializeSubitems();
 
         // Initialize empty arrays for each subitem definition if not present
         if (this.data.evidence.subitemDefinitions) {
@@ -1299,8 +1299,8 @@ export class RecordEditorDialogComponent implements OnInit {
                 }
                 this.subitems[subitemDef.fieldName].push(result);
 
-                // Create a new array reference to trigger change detection in ag-grid
-                this.subitems[subitemDef.fieldName] = [...this.subitems[subitemDef.fieldName]];
+                // Process calculated fields if any
+                this.processCalculatedFields(subitemDef);
             }
         });
     }
@@ -1323,8 +1323,8 @@ export class RecordEditorDialogComponent implements OnInit {
                 const index = this.subitems[subitemDef.fieldName].findIndex(item => item.id === result.id);
                 if (index !== -1) {
                     this.subitems[subitemDef.fieldName][index] = result;
-                    // Create a new array to trigger change detection
-                    this.subitems[subitemDef.fieldName] = [...this.subitems[subitemDef.fieldName]];
+                    // Process calculated fields
+                    this.processCalculatedFields(subitemDef);
                 }
             }
         });
@@ -1339,6 +1339,60 @@ export class RecordEditorDialogComponent implements OnInit {
                 // Create a new array to trigger change detection
                 this.subitems[fieldName] = [...this.subitems[fieldName]];
             }
+        }
+    }
+
+    private initializeSubitems(): void {
+        // Initialize subitems if in edit mode
+        if (this.data.mode === 'edit' && this.data.record?.subitems) {
+            this.subitems = { ...this.data.record.subitems };
+
+            // Process calculated fields for each subitem type
+            this.processCalculatedFieldsForAllSubitems();
+        }
+    }
+
+    /**
+     * Process all calculated fields for all subitem types
+     */
+    private processCalculatedFieldsForAllSubitems(): void {
+        if (!this.data.evidence.subitemDefinitions) return;
+
+        this.data.evidence.subitemDefinitions.forEach(subitemDef => {
+            const fieldName = subitemDef.fieldName;
+            const records = this.subitems[fieldName];
+
+            if (records && records.length > 0) {
+                // Check if this subitem definition has any calculated fields
+                const hasCalculatedFields = subitemDef.columns.some(col => col.isCalculated && col.formula);
+
+                if (hasCalculatedFields) {
+                    // Use the service to process calculated fields
+                    this.subitems[fieldName] = this.evidenceService.processCalculatedFields(
+                        records,
+                        subitemDef.columns
+                    );
+                }
+            }
+        });
+    }
+
+    /**
+     * Process calculated fields for a specific subitem definition
+     */
+    private processCalculatedFields(subitemDef: SubitemDefinition): void {
+        const fieldName = subitemDef.fieldName;
+        const hasCalculatedFields = subitemDef.columns.some(col => col.isCalculated && col.formula);
+
+        if (hasCalculatedFields && this.subitems[fieldName] && this.subitems[fieldName].length > 0) {
+            // Use the service to process calculated fields
+            this.subitems[fieldName] = this.evidenceService.processCalculatedFields(
+                this.subitems[fieldName],
+                subitemDef.columns
+            );
+
+            // Create a new array reference to trigger change detection in ag-grid
+            this.subitems[fieldName] = [...this.subitems[fieldName]];
         }
     }
 }

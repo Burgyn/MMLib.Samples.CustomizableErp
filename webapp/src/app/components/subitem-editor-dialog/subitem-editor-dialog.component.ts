@@ -1,8 +1,9 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { SubitemDefinition, SubitemRecord } from '../../models/evidence.model';
+import { EvidenceService } from '../../services/evidence.service';
 
 @Component({
     selector: 'app-subitem-editor-dialog',
@@ -20,35 +21,45 @@ import { SubitemDefinition, SubitemRecord } from '../../models/evidence.model';
                         <div class="row">
                             <ng-container *ngFor="let column of data.subitemDefinition.columns">
                                 <div class="col-md-6 mb-3">
-                                    <label [for]="column.field" class="form-label">{{ column.headerName }}</label>
+                                    <label [for]="column.field" class="form-label">
+                                        {{ column.headerName }}
+                                        <span *ngIf="column.isCalculated" class="calculated-badge ms-1" title="Počítané pole">
+                                            <i class="bi bi-calculator"></i>
+                                        </span>
+                                    </label>
                                     <ng-container [ngSwitch]="column.type">
                                         <!-- Text input -->
                                         <input *ngSwitchCase="'string'"
                                             [id]="column.field"
                                             type="text"
                                             class="form-control"
-                                            [formControlName]="column.field">
+                                            [formControlName]="column.field"
+                                            [readOnly]="!!column.isCalculated">
 
                                         <!-- Number input -->
                                         <input *ngSwitchCase="'number'"
                                             [id]="column.field"
                                             type="number"
                                             class="form-control"
-                                            [formControlName]="column.field">
+                                            [formControlName]="column.field"
+                                            [readOnly]="!!column.isCalculated"
+                                            [class.calculated-field]="!!column.isCalculated">
 
                                         <!-- Date input -->
                                         <input *ngSwitchCase="'date'"
                                             [id]="column.field"
                                             type="date"
                                             class="form-control"
-                                            [formControlName]="column.field">
+                                            [formControlName]="column.field"
+                                            [readOnly]="!!column.isCalculated">
 
                                         <!-- Boolean input -->
                                         <div *ngSwitchCase="'boolean'" class="form-check">
                                             <input class="form-check-input"
                                                 type="checkbox"
                                                 [id]="column.field"
-                                                [formControlName]="column.field">
+                                                [formControlName]="column.field"
+                                                [disabled]="!!column.isCalculated">
                                         </div>
 
                                         <!-- Default text input -->
@@ -56,8 +67,12 @@ import { SubitemDefinition, SubitemRecord } from '../../models/evidence.model';
                                             [id]="column.field"
                                             type="text"
                                             class="form-control"
-                                            [formControlName]="column.field">
+                                            [formControlName]="column.field"
+                                            [readOnly]="!!column.isCalculated">
                                     </ng-container>
+                                    <small *ngIf="column.isCalculated && column.formula" class="form-text text-muted">
+                                        Formula: {{ column.formula }}
+                                    </small>
                                 </div>
                             </ng-container>
                         </div>
@@ -147,14 +162,41 @@ import { SubitemDefinition, SubitemRecord } from '../../models/evidence.model';
             background-color: var(--secondary-color);
             border-color: var(--secondary-color);
         }
+
+        .calculated-field {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+
+        .calculated-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background-color: #e9ecef;
+            border-radius: 50%;
+            font-size: 10px;
+            color: #6c757d;
+        }
+
+        /* Style for readonly inputs to indicate they are calculated */
+        input[readonly].form-control.calculated-field {
+            background-color: rgba(var(--primary-rgb), 0.05);
+            border-color: rgba(var(--primary-rgb), 0.2);
+            color: var(--text-color);
+        }
     `]
 })
 export class SubitemEditorDialogComponent implements OnInit {
     recordForm: FormGroup;
+    // Keep track of field dependencies
+    fieldDependencies: { [field: string]: string[] } = {};
 
     constructor(
         private fb: FormBuilder,
         private dialogRef: MatDialogRef<SubitemEditorDialogComponent>,
+        private evidenceService: EvidenceService,
         @Inject(MAT_DIALOG_DATA) public data: {
             subitemDefinition: SubitemDefinition;
             record?: SubitemRecord;
@@ -167,6 +209,7 @@ export class SubitemEditorDialogComponent implements OnInit {
 
     ngOnInit(): void {
         this.initializeFormControls();
+        this.setupCalculatedFieldDependencies();
     }
 
     private initializeFormControls(): void {
@@ -179,10 +222,66 @@ export class SubitemEditorDialogComponent implements OnInit {
                 ? this.data.record.data[column.field]
                 : null;
 
-            formGroup[column.field] = [initialValue];
+            // For calculated fields, just add the control (calculations will be done later)
+            formGroup[column.field] = [initialValue, column.isCalculated ? [] : []];
         });
 
         this.recordForm = this.fb.group(formGroup);
+    }
+
+    /**
+     * Set up listeners for fields that affect calculated fields
+     */
+    private setupCalculatedFieldDependencies(): void {
+        // Map of calculated fields and their dependent fields
+        this.fieldDependencies = {};
+
+        // Find all calculated fields and their dependencies
+        this.data.subitemDefinition.columns.forEach(column => {
+            if (column.isCalculated && column.formula && column.formulaFields) {
+                // Register dependencies
+                column.formulaFields.forEach(sourceField => {
+                    if (!this.fieldDependencies[sourceField]) {
+                        this.fieldDependencies[sourceField] = [];
+                    }
+                    this.fieldDependencies[sourceField].push(column.field);
+                });
+
+                // Initial calculation
+                this.updateCalculatedField(column.field);
+            }
+        });
+
+        // Set up listeners for value changes
+        Object.keys(this.fieldDependencies).forEach(sourceField => {
+            if (this.recordForm.get(sourceField)) {
+                this.recordForm.get(sourceField)!.valueChanges.subscribe(value => {
+                    // Update all dependent calculated fields
+                    this.fieldDependencies[sourceField].forEach(targetField => {
+                        this.updateCalculatedField(targetField);
+                    });
+                });
+            }
+        });
+    }
+
+    /**
+     * Update a single calculated field based on its formula
+     */
+    private updateCalculatedField(fieldName: string): void {
+        const column = this.data.subitemDefinition.columns.find(col => col.field === fieldName);
+        if (!column || !column.isCalculated || !column.formula) return;
+
+        // Get current form values
+        const currentValues = this.recordForm.value;
+
+        // Use the formula evaluation service
+        try {
+            const calculatedValue = this.evidenceService.evaluateFormula(column.formula, currentValues);
+            this.recordForm.get(fieldName)?.setValue(calculatedValue, { emitEvent: false });
+        } catch (error) {
+            console.error(`Error calculating field ${fieldName}:`, error);
+        }
     }
 
     cancel(): void {
@@ -192,16 +291,26 @@ export class SubitemEditorDialogComponent implements OnInit {
     save(): void {
         const formData = this.recordForm.value;
 
+        // Make sure calculated fields are updated one final time before saving
+        this.data.subitemDefinition.columns
+            .filter(col => col.isCalculated && col.formula)
+            .forEach(col => {
+                this.updateCalculatedField(col.field);
+            });
+
+        // Get the final form values after all calculations
+        const finalFormData = this.recordForm.value;
+
         // Create or update subitem record
         const record: SubitemRecord = this.data.mode === 'edit' && this.data.record
             ? {
                 ...this.data.record,
-                data: formData
+                data: finalFormData
               }
             : {
                 id: crypto.randomUUID(),
                 parentRecordId: this.data.parentRecordId,
-                data: formData,
+                data: finalFormData,
                 createdAt: new Date(),
                 updatedAt: new Date()
               };
