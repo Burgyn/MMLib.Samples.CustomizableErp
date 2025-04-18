@@ -1,14 +1,16 @@
 import { Component, Inject, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { Evidence, EvidenceRecord } from '../../models/evidence.model';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
+import { Evidence, EvidenceRecord, SubitemDefinition, SubitemRecord } from '../../models/evidence.model';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { AgGridModule } from 'ag-grid-angular';
+import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-editor-dialog.component';
 
 @Component({
     selector: 'app-record-editor-dialog',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, MatDialogModule, FormsModule],
+    imports: [CommonModule, ReactiveFormsModule, MatDialogModule, FormsModule, AgGridModule],
     template: `
         <div class="record-editor-dialog" role="dialog" aria-labelledby="dialog-title">
             <div class="dialog-header">
@@ -58,6 +60,32 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
                 <div class="content-panel">
                     <form [formGroup]="recordForm" class="form-container p-0" #formContainer>
                         <div [innerHTML]="formHtml" class="form-fields"></div>
+
+                        <!-- Subitems Sections -->
+                        <div *ngIf="data.evidence.subitemDefinitions && data.evidence.subitemDefinitions.length > 0" class="subitems-section mt-4">
+                            <ng-container *ngFor="let subitemDef of data.evidence.subitemDefinitions">
+                                <div class="subitem-grid-container mt-4 mb-4">
+                                    <div class="subitem-header d-flex justify-content-between align-items-center mb-2">
+                                        <h5 class="mb-0">{{ subitemDef.name }}</h5>
+                                        <button class="btn btn-sm btn-outline-primary" (click)="addSubitem(subitemDef)">
+                                            <i class="bi bi-plus-lg"></i> Pridať položku
+                                        </button>
+                                    </div>
+
+                                    <div class="ag-theme-alpine subitem-grid">
+                                        <ag-grid-angular
+                                            [rowData]="getSubitemRows(subitemDef.fieldName)"
+                                            [columnDefs]="getSubitemColumnDefs(subitemDef)"
+                                            [defaultColDef]="{ sortable: true, filter: true, resizable: true }"
+                                            [pagination]="false"
+                                            [domLayout]="'autoHeight'"
+                                            [rowHeight]="40"
+                                        ></ag-grid-angular>
+                                    </div>
+                                </div>
+                            </ng-container>
+                        </div>
+
                         <div class="debug-section mt-3" *ngIf="showDebug">
                             <pre class="debug-info">{{ debugInfo }}</pre>
                         </div>
@@ -367,6 +395,25 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
         .detail-item:last-child {
             margin-right: 0;
         }
+
+        .subitem-grid-container {
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+        }
+
+        .subitem-header {
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .subitem-grid {
+            height: auto;
+            min-height: 150px;
+            width: 100%;
+        }
     `]
 })
 export class RecordEditorDialogComponent implements OnInit {
@@ -391,10 +438,14 @@ export class RecordEditorDialogComponent implements OnInit {
     filteredSuggestions: string[] = [];
     tagColors: { [key: string]: string } = {};
 
+    // Subitems state
+    subitems: { [fieldName: string]: SubitemRecord[] } = {};
+
     constructor(
         private fb: FormBuilder,
         private sanitizer: DomSanitizer,
         private dialogRef: MatDialogRef<RecordEditorDialogComponent>,
+        private dialog: MatDialog,
         @Inject(MAT_DIALOG_DATA) public data: {
             evidence: Evidence;
             record?: EvidenceRecord;
@@ -421,6 +472,9 @@ export class RecordEditorDialogComponent implements OnInit {
 
         // Load saved tags from localStorage
         this.loadTagSuggestions();
+
+        // Initialize subitems
+        this.subitems = {};
     }
 
     toggleDebug(): void {
@@ -691,6 +745,20 @@ export class RecordEditorDialogComponent implements OnInit {
                 }
             });
         });
+
+        // Initialize subitems if editing an existing record
+        if (this.data.mode === 'edit' && this.data.record && this.data.record.subitems) {
+            this.subitems = { ...this.data.record.subitems };
+        }
+
+        // Initialize empty arrays for each subitem definition if not present
+        if (this.data.evidence.subitemDefinitions) {
+            this.data.evidence.subitemDefinitions.forEach(def => {
+                if (!this.subitems[def.fieldName]) {
+                    this.subitems[def.fieldName] = [];
+                }
+            });
+        }
     }
 
     private initializeFormControls(): void {
@@ -937,15 +1005,159 @@ export class RecordEditorDialogComponent implements OnInit {
         // Save tags to local storage before closing
         this.saveTagSuggestions();
 
-        const record: Partial<EvidenceRecord> = {
-            id: this.data.record?.id,
-            evidenceId: this.data.evidence.id,
-            documentNumber: this.documentNumber,
-            tags: this.tags,
-            data: this.recordForm.value, // Save data from dynamic fields
-            createdAt: this.data.record?.createdAt || new Date(),
-            updatedAt: new Date()
-        };
+        // Get form values and prepare record data
+        const formData = this.extractFormValues();
+
+        // Create or update record
+        const record: EvidenceRecord = this.data.mode === 'edit' && this.data.record
+            ? {
+                ...this.data.record,
+                documentNumber: this.documentNumber,
+                tags: [...this.tags],
+                data: formData,
+                subitems: this.subitems, // Add subitems to the record
+                updatedAt: new Date()
+              }
+            : {
+                id: crypto.randomUUID(),
+                evidenceId: this.data.evidence.id,
+                documentNumber: this.documentNumber,
+                tags: [...this.tags],
+                data: formData,
+                subitems: this.subitems, // Add subitems to the record
+                createdAt: new Date(),
+                updatedAt: new Date()
+              };
+
+        // Close dialog with the complete record
         this.dialogRef.close(record);
+    }
+
+    // Helper method to extract form values
+    private extractFormValues(): any {
+        // Extract form values
+        const formValues: { [key: string]: any } = {};
+
+        // Get all form fields
+        const formElements = this.formContainer.nativeElement.querySelectorAll('input, select, textarea');
+        formElements.forEach((element: any) => {
+            if (element.name) {
+                if (element.type === 'checkbox') {
+                    formValues[element.name] = element.checked;
+                } else if (element.type === 'number') {
+                    formValues[element.name] = element.value !== '' ? Number(element.value) : null;
+                } else {
+                    formValues[element.name] = element.value;
+                }
+            }
+        });
+
+        return formValues;
+    }
+
+    // Get the rows for a specific subitem grid
+    getSubitemRows(fieldName: string): SubitemRecord[] {
+        return this.subitems[fieldName] || [];
+    }
+
+    // Get column definitions for a subitem grid
+    getSubitemColumnDefs(subitemDef: SubitemDefinition): any[] {
+        const columnDefs = [...subitemDef.columns.map(col => ({
+            field: `data.${col.field}`,
+            headerName: col.headerName,
+            sortable: true,
+            filter: true,
+            width: col.width
+        }))];
+
+        // Add action buttons column
+        columnDefs.push({
+            headerName: 'Akcie',
+            field: 'id',
+            width: 120,
+            cellRenderer: (params: any) => {
+                const container = document.createElement('div');
+                container.classList.add('d-flex', 'gap-2');
+
+                // Edit button
+                const editBtn = document.createElement('button');
+                editBtn.classList.add('btn', 'btn-sm', 'btn-outline-primary');
+                editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                editBtn.title = 'Upraviť';
+                editBtn.addEventListener('click', () => this.editSubitem(subitemDef, params.data));
+
+                // Delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger');
+                deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                deleteBtn.title = 'Vymazať';
+                deleteBtn.addEventListener('click', () => this.deleteSubitem(subitemDef.fieldName, params.data.id));
+
+                container.appendChild(editBtn);
+                container.appendChild(deleteBtn);
+
+                return container;
+            }
+        } as any); // Cast to any to avoid TypeScript error
+
+        return columnDefs;
+    }
+
+    // Add a new subitem
+    addSubitem(subitemDef: SubitemDefinition): void {
+        const dialogRef = this.dialog.open(SubitemEditorDialogComponent, {
+            width: '600px',
+            data: {
+                subitemDefinition: subitemDef,
+                parentRecordId: this.data.record?.id || 'temp',
+                mode: 'create'
+            }
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+            if (result) {
+                if (!this.subitems[subitemDef.fieldName]) {
+                    this.subitems[subitemDef.fieldName] = [];
+                }
+                this.subitems[subitemDef.fieldName].push(result);
+            }
+        });
+    }
+
+    // Edit an existing subitem
+    editSubitem(subitemDef: SubitemDefinition, record: SubitemRecord): void {
+        const dialogRef = this.dialog.open(SubitemEditorDialogComponent, {
+            width: '600px',
+            data: {
+                subitemDefinition: subitemDef,
+                record: record,
+                parentRecordId: this.data.record?.id || 'temp',
+                mode: 'edit'
+            }
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+            if (result) {
+                // Find and replace the updated record
+                const index = this.subitems[subitemDef.fieldName].findIndex(item => item.id === result.id);
+                if (index !== -1) {
+                    this.subitems[subitemDef.fieldName][index] = result;
+                    // Create a new array to trigger change detection
+                    this.subitems[subitemDef.fieldName] = [...this.subitems[subitemDef.fieldName]];
+                }
+            }
+        });
+    }
+
+    // Delete a subitem
+    deleteSubitem(fieldName: string, recordId: string): void {
+        if (confirm('Naozaj chcete odstrániť túto položku?')) {
+            const index = this.subitems[fieldName].findIndex(item => item.id === recordId);
+            if (index !== -1) {
+                this.subitems[fieldName].splice(index, 1);
+                // Create a new array to trigger change detection
+                this.subitems[fieldName] = [...this.subitems[fieldName]];
+            }
+        }
     }
 }

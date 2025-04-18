@@ -16,8 +16,16 @@ export interface Evidence {
     order?: number;
     formDefinition: string; // GrapesJS JSON
     gridColumns: GridColumn[];
+    subitemDefinitions?: SubitemDefinition[];
     createdAt: Date;
     updatedAt: Date;
+}
+
+export interface SubitemDefinition {
+    id: string;
+    name: string;
+    fieldName: string;
+    columns: GridColumn[];
 }
 
 export interface GridColumn {
@@ -34,6 +42,15 @@ export interface EvidenceRecord {
     evidenceId: string;
     documentNumber?: string;
     tags?: string[];
+    data: any;
+    subitems?: {[fieldName: string]: SubitemRecord[]};
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface SubitemRecord {
+    id: string;
+    parentRecordId: string;
     data: any;
     createdAt: Date;
     updatedAt: Date;

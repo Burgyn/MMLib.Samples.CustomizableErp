@@ -1,5 +1,5 @@
 import { ActivatedRoute, Router } from '@angular/router';
-import { Category, Evidence, GridColumn } from '../../models/evidence.model';
+import { Category, Evidence, GridColumn, SubitemDefinition } from '../../models/evidence.model';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { Editor, Component as GrapesComponent } from 'grapesjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -11,6 +11,7 @@ import grapesjs from 'grapesjs';
 import grapesjsBlocksBasic from 'grapesjs-blocks-basic';
 import grapesjsPluginForms from 'grapesjs-plugin-forms';
 import grapesjsPresetWebpage from 'grapesjs-preset-webpage';
+import * as bootstrap from 'bootstrap';
 
 // Define interfaces for dummy data if not already defined elsewhere
 interface Partner { id: string; name: string; }
@@ -46,9 +47,13 @@ interface Iban { id: string; value: string; }
                                 [disabled]="!evidenceForm.valid">
                             <i class="bi bi-save"></i> Save
                         </button>
-                        <button class="btn btn-outline-secondary"
+                        <button class="btn btn-outline-secondary me-2"
                                 (click)="showAiDialog()">
                             Try AI ✨
+                        </button>
+                        <button class="btn btn-outline-secondary"
+                                (click)="showSubitemDialog()">
+                            <i class="bi bi-table"></i> Add Subitems
                         </button>
                     </div>
                 </form>
@@ -87,6 +92,123 @@ interface Iban { id: string; value: string; }
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type="button" class="btn btn-primary" [disabled]="!aiPrompt || !openaiApiKey || isGenerating" (click)="generateEvidenceWithAI()">Generate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subitem Definition Dialog -->
+        <div class="modal fade" id="subitemDialog" tabindex="-1" aria-labelledby="subitemDialogLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-dialog-scrollable modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="subitemDialogLabel">Define Subitems</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <p class="text-muted">Configure subitem definitions for nested records. For example, define items for an invoice.</p>
+                        </div>
+
+                        <div *ngIf="subitemDefinitions.length > 0" class="mb-4">
+                            <h6>Current Subitem Definitions</h6>
+                            <div class="list-group">
+                                <div *ngFor="let def of subitemDefinitions; let i = index" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ def.name }}</strong>
+                                        <small class="text-muted ms-2">({{ def.fieldName }})</small>
+                                        <div class="small text-muted">{{ def.columns.length }} columns</div>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" (click)="editSubitemDefinition(i)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" (click)="deleteSubitemDefinition(i)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <button class="btn btn-outline-primary" (click)="startNewSubitemDefinition()">
+                                <i class="bi bi-plus-lg"></i> Add New Subitem Definition
+                            </button>
+                        </div>
+
+                        <div *ngIf="showSubitemForm" class="subitem-form border rounded p-3 mt-3">
+                            <h6>{{ editingExistingSubitem ? 'Edit' : 'New' }} Subitem Definition</h6>
+
+                            <div class="mb-3">
+                                <label for="subitemName" class="form-label">Display Name</label>
+                                <input type="text" class="form-control" id="subitemName" [(ngModel)]="currentSubitem.name" placeholder="e.g., Invoice Items">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="subitemField" class="form-label">Field Name</label>
+                                <input type="text" class="form-control" id="subitemField" [(ngModel)]="currentSubitem.fieldName" placeholder="e.g., invoiceItems">
+                                <div class="form-text">Used as the property name in the JSON data structure.</div>
+                            </div>
+
+                            <h6 class="mt-4">Columns</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Field Name</th>
+                                            <th>Header Name</th>
+                                            <th>Type</th>
+                                            <th>Width</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let column of currentSubitem.columns; let i = index">
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="column.field" placeholder="field">
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="column.headerName" placeholder="Header">
+                                            </td>
+                                            <td>
+                                                <select class="form-select form-select-sm" [(ngModel)]="column.type">
+                                                    <option value="string">Text</option>
+                                                    <option value="number">Number</option>
+                                                    <option value="date">Date</option>
+                                                    <option value="boolean">Boolean</option>
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm" [(ngModel)]="column.width" placeholder="Width">
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" (click)="removeColumn(i)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr *ngIf="currentSubitem.columns.length === 0">
+                                            <td colspan="5" class="text-center text-muted">No columns defined</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="mb-3">
+                                <button class="btn btn-sm btn-outline-primary" (click)="addColumn()">
+                                    <i class="bi bi-plus-lg"></i> Add Column
+                                </button>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-3">
+                                <button class="btn btn-secondary me-2" (click)="cancelSubitemEdit()">Cancel</button>
+                                <button class="btn btn-primary" [disabled]="!isValidSubitemDefinition()" (click)="saveSubitemDefinition()">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -150,6 +272,19 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
     isGenerating: boolean = false;
     aiError: string | null = null;
     private aiDialog: any; // Will hold the Bootstrap modal reference
+
+    // Subitem definition properties
+    subitemDefinitions: SubitemDefinition[] = [];
+    showSubitemForm: boolean = false;
+    editingExistingSubitem: boolean = false;
+    currentEditingIndex: number = -1;
+    currentSubitem: SubitemDefinition = {
+        id: '',
+        name: '',
+        fieldName: '',
+        columns: []
+    };
+    private subitemDialog: any; // Will hold the Bootstrap modal reference
 
     constructor(
         private fb: FormBuilder,
@@ -759,9 +894,12 @@ body {
                     name: evidence.name,
                     categoryId: evidence.categoryId
                 });
-                if (this.editor && evidence.formDefinition) {
-                    this.editor.loadData(JSON.parse(evidence.formDefinition));
-                }
+
+                // Load subitem definitions if any
+                this.subitemDefinitions = evidence.subitemDefinitions || [];
+
+                // Load form definition into the editor
+                this.editor?.loadProjectData(JSON.parse(evidence.formDefinition));
             }
         });
     }
@@ -769,22 +907,42 @@ body {
     saveEvidence(): void {
         if (!this.editor || !this.evidenceForm.valid) return;
 
-        const formDefinition = JSON.stringify(this.editor.getProjectData());
+        // Get the form values
+        const formValues = this.evidenceForm.value;
+
+        // Extract grid columns from editor
         const gridColumns = this.extractGridColumns(this.editor);
 
-        const evidence: Evidence = {
-            id: this.evidenceId || crypto.randomUUID(),
-            name: this.evidenceForm.value.name,
-            categoryId: this.evidenceForm.value.categoryId,
-            formDefinition,
+        // Prepare evidence data
+        const evidenceData: Partial<Evidence> = {
+            name: formValues.name,
+            categoryId: formValues.categoryId,
+            formDefinition: JSON.stringify(this.editor.getProjectData()),
             gridColumns,
-            createdAt: new Date(),
+            subitemDefinitions: this.subitemDefinitions,
             updatedAt: new Date()
         };
 
-        this.evidenceService.saveEvidence(evidence).subscribe(() => {
-            this.router.navigate(['/evidence', evidence.id]);
-        });
+        // Create or update evidence
+        if (this.evidenceId) {
+            // Update existing evidence
+            this.evidenceService.saveEvidence({
+                ...evidenceData,
+                id: this.evidenceId,
+                createdAt: new Date() // This will be ignored for existing evidence
+            } as Evidence).subscribe(() => {
+                this.router.navigate(['/evidences']);
+            });
+        } else {
+            // Create new evidence
+            this.evidenceService.saveEvidence({
+                ...evidenceData,
+                id: crypto.randomUUID(),
+                createdAt: new Date()
+            } as Evidence).subscribe(() => {
+                this.router.navigate(['/evidences']);
+            });
+        }
     }
 
     private extractGridColumns(editor: Editor): GridColumn[] {
@@ -1466,5 +1624,112 @@ body {
                 }
             }
         }
+    }
+
+    // Show subitem definition dialog
+    showSubitemDialog(): void {
+        // Initialize the Bootstrap modal if not already done
+        if (!this.subitemDialog) {
+            const dialogElement = document.getElementById('subitemDialog');
+            if (dialogElement) {
+                this.subitemDialog = new bootstrap.Modal(dialogElement);
+            }
+        }
+
+        // Show the dialog
+        if (this.subitemDialog) {
+            this.subitemDialog.show();
+        }
+    }
+
+    // Start creating a new subitem definition
+    startNewSubitemDefinition(): void {
+        this.editingExistingSubitem = false;
+        this.currentEditingIndex = -1;
+        this.currentSubitem = {
+            id: crypto.randomUUID(),
+            name: '',
+            fieldName: '',
+            columns: []
+        };
+        this.showSubitemForm = true;
+    }
+
+    // Edit an existing subitem definition
+    editSubitemDefinition(index: number): void {
+        if (index >= 0 && index < this.subitemDefinitions.length) {
+            this.editingExistingSubitem = true;
+            this.currentEditingIndex = index;
+            // Clone the subitem definition to avoid direct modification
+            this.currentSubitem = JSON.parse(JSON.stringify(this.subitemDefinitions[index]));
+            this.showSubitemForm = true;
+        }
+    }
+
+    // Delete a subitem definition
+    deleteSubitemDefinition(index: number): void {
+        if (confirm('Are you sure you want to delete this subitem definition?')) {
+            if (index >= 0 && index < this.subitemDefinitions.length) {
+                this.subitemDefinitions.splice(index, 1);
+            }
+        }
+    }
+
+    // Add a new column to the current subitem definition
+    addColumn(): void {
+        this.currentSubitem.columns.push({
+            field: '',
+            headerName: '',
+            type: 'string',
+            width: 150,
+            sortable: true,
+            filter: true
+        });
+    }
+
+    // Remove a column from the current subitem definition
+    removeColumn(index: number): void {
+        if (index >= 0 && index < this.currentSubitem.columns.length) {
+            this.currentSubitem.columns.splice(index, 1);
+        }
+    }
+
+    // Validate the current subitem definition
+    isValidSubitemDefinition(): boolean {
+        return !!(
+            this.currentSubitem.name &&
+            this.currentSubitem.fieldName &&
+            this.currentSubitem.columns.length > 0 &&
+            this.currentSubitem.columns.every(col => col.field && col.headerName)
+        );
+    }
+
+    // Save the current subitem definition
+    saveSubitemDefinition(): void {
+        if (!this.isValidSubitemDefinition()) return;
+
+        if (this.editingExistingSubitem && this.currentEditingIndex >= 0) {
+            // Update existing definition
+            this.subitemDefinitions[this.currentEditingIndex] = { ...this.currentSubitem };
+        } else {
+            // Add new definition
+            this.subitemDefinitions.push({ ...this.currentSubitem });
+        }
+
+        // Reset form
+        this.cancelSubitemEdit();
+    }
+
+    // Cancel editing subitem definition
+    cancelSubitemEdit(): void {
+        this.showSubitemForm = false;
+        this.editingExistingSubitem = false;
+        this.currentEditingIndex = -1;
+        this.currentSubitem = {
+            id: '',
+            name: '',
+            fieldName: '',
+            columns: []
+        };
     }
 }
