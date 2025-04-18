@@ -993,170 +993,565 @@ body {
 
         // Process each component from the AI response
         components.forEach(comp => {
-            let componentContent = '';
+            let component: any;
 
             switch (comp.type) {
                 case 'text-input':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label}</label>
-                        <input type="text" class="form-control" data-gjs-type="text-input" name="${comp.name}" ${comp.required ? 'required' : ''}/>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label
+                            },
+                            {
+                                tagName: 'input',
+                                attributes: {
+                                    type: 'text',
+                                    class: 'form-control',
+                                    'data-gjs-type': 'text-input',
+                                    name: comp.name,
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'text-input',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name },
+                                    { type: 'text', name: 'displayName', value: comp.label },
+                                    { type: 'text', name: 'placeholder', value: '' },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'number-input':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label}</label>
-                        <input type="number" class="form-control" data-gjs-type="number-input" name="${comp.name}" ${comp.required ? 'required' : ''}/>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label
+                            },
+                            {
+                                tagName: 'input',
+                                attributes: {
+                                    type: 'number',
+                                    class: 'form-control',
+                                    'data-gjs-type': 'number-input',
+                                    name: comp.name,
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'number-input',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name },
+                                    { type: 'text', name: 'displayName', value: comp.label },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'date-input':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label}</label>
-                        <input type="date" class="form-control" data-gjs-type="date-input" name="${comp.name}" ${comp.required ? 'required' : ''}/>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label
+                            },
+                            {
+                                tagName: 'input',
+                                attributes: {
+                                    type: 'date',
+                                    class: 'form-control',
+                                    'data-gjs-type': 'date-input',
+                                    name: comp.name,
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'date-input',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name },
+                                    { type: 'text', name: 'displayName', value: comp.label },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'select':
-                    let options = '';
+                    const selectOptions = [];
+
                     if (comp.options && Array.isArray(comp.options)) {
-                        options = comp.options.map((opt: string) =>
-                            `<option value="${opt.toLowerCase().replace(/\s+/g, '_')}">${opt}</option>`
-                        ).join('');
+                        for (const opt of comp.options) {
+                            selectOptions.push({
+                                tagName: 'option',
+                                attributes: { value: opt.toLowerCase().replace(/\s+/g, '_') },
+                                content: opt
+                            });
+                        }
                     }
 
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label}</label>
-                        <select class="form-select" data-gjs-type="select" name="${comp.name}" ${comp.required ? 'required' : ''}>
-                            <option value="">Select ${comp.label}</option>
-                            ${options}
-                        </select>
-                    </div>`;
+                    const selectComponents = [
+                        {
+                            tagName: 'label',
+                            attributes: { class: 'form-label' },
+                            content: comp.label
+                        },
+                        {
+                            tagName: 'select',
+                            attributes: {
+                                class: 'form-select',
+                                'data-gjs-type': 'select',
+                                name: comp.name,
+                                ...(comp.required ? { required: true } : {})
+                            },
+                            type: 'select',
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name },
+                                { type: 'text', name: 'displayName', value: comp.label },
+                                { type: 'checkbox', name: 'required', value: comp.required || false }
+                            ],
+                            components: [
+                                {
+                                    tagName: 'option',
+                                    attributes: { value: '' },
+                                    content: `Select ${comp.label}`
+                                },
+                                ...selectOptions
+                            ]
+                        }
+                    ];
+
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: selectComponents
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'textarea':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label}</label>
-                        <textarea class="form-control" data-gjs-type="textarea" name="${comp.name}" ${comp.required ? 'required' : ''}></textarea>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label
+                            },
+                            {
+                                tagName: 'textarea',
+                                attributes: {
+                                    class: 'form-control',
+                                    'data-gjs-type': 'textarea',
+                                    name: comp.name,
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'textarea',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name },
+                                    { type: 'text', name: 'displayName', value: comp.label },
+                                    { type: 'text', name: 'placeholder', value: '' },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'checkbox-input':
-                    componentContent = `<div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" data-gjs-type="checkbox-input" name="${comp.name}" ${comp.required ? 'required' : ''}>
-                        <label class="form-check-label">
-                            ${comp.label}
-                        </label>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'form-check mb-3' },
+                        components: [
+                            {
+                                tagName: 'input',
+                                attributes: {
+                                    class: 'form-check-input',
+                                    type: 'checkbox',
+                                    'data-gjs-type': 'checkbox-input',
+                                    name: comp.name,
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'checkbox-input',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name },
+                                    { type: 'text', name: 'displayName', value: comp.label },
+                                    { type: 'text', name: 'value', value: 'true' },
+                                    { type: 'text', name: 'label', value: comp.label },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false },
+                                    { type: 'checkbox', name: 'checked', value: false }
+                                ]
+                            },
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-check-label' },
+                                content: comp.label
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'radio-input':
-                    let radioOptions = '';
                     if (comp.options && Array.isArray(comp.options)) {
-                        radioOptions = comp.options.map((opt: string, idx: number) =>
-                            `<div class="form-check">
-                                <input class="form-check-input" type="radio" name="${comp.name}"
-                                       id="${comp.name}_${idx}" value="${opt.toLowerCase().replace(/\s+/g, '_')}"
-                                       data-gjs-type="radio-input" ${idx === 0 && comp.required ? 'required' : ''}>
-                                <label class="form-check-label" for="${comp.name}_${idx}">
-                                    ${opt}
-                                </label>
-                            </div>`
-                        ).join('');
-                    }
+                        // Create radio buttons as HTML instead of nested components
+                        let radioHtml = `<div class="mb-3">
+                            <label class="form-label d-block">${comp.label}</label>`;
 
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label d-block">${comp.label}</label>
-                        ${radioOptions}
-                    </div>`;
+                        comp.options.forEach((opt: string, idx: number) => {
+                            const optValue = opt.toLowerCase().replace(/\s+/g, '_');
+                            const optId = `${comp.name}_${idx}`;
+                            const requiredAttr = idx === 0 && comp.required ? 'required' : '';
+
+                            radioHtml += `
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                    id="${optId}" name="${comp.name}" value="${optValue}"
+                                    data-gjs-type="radio-input" ${requiredAttr}>
+                                <label class="form-check-label" for="${optId}">${opt}</label>
+                            </div>`;
+                        });
+
+                        radioHtml += `</div>`;
+
+                        // Add entire radio group as a single component with HTML
+                        component = this.editor?.DomComponents.addComponent({
+                            type: 'text',
+                            content: radioHtml,
+                            traits: [
+                                { type: 'text', name: 'name', value: comp.name },
+                                { type: 'text', name: 'displayName', value: comp.label }
+                            ]
+                        }, { at: formContainer.get('components')?.length || 0 });
+                    }
                     break;
 
                 case 'partner-select':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label}</label>
-                        <select class="form-select" data-gjs-type="partner-select" name="${comp.name}" ${comp.required ? 'required' : ''}></select>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label
+                            },
+                            {
+                                tagName: 'select',
+                                attributes: {
+                                    class: 'form-select',
+                                    'data-gjs-type': 'partner-select',
+                                    name: comp.name,
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'partner-select',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name },
+                                    { type: 'text', name: 'displayName', value: comp.label },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 // Handle special economic fields
                 case 'iban-select':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label || 'IBAN / Číslo účtu'}</label>
-                        <select class="form-select" data-gjs-type="select" name="${comp.name || 'ibanId'}" ${comp.required ? 'required' : ''}>
-                            <option value="">Vyberte IBAN...</option>
-                            <option value="1">SK1234567890123456789012</option>
-                            <option value="2">SK9876543210987654321098</option>
-                        </select>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label || 'IBAN / Číslo účtu'
+                            },
+                            {
+                                tagName: 'select',
+                                attributes: {
+                                    class: 'form-select',
+                                    'data-gjs-type': 'select',
+                                    name: comp.name || 'ibanId',
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'select',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name || 'ibanId' },
+                                    { type: 'text', name: 'displayName', value: comp.label || 'IBAN / Číslo účtu' },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ],
+                                components: [
+                                    {
+                                        tagName: 'option',
+                                        attributes: { value: '' },
+                                        content: 'Vyberte IBAN...'
+                                    },
+                                    {
+                                        tagName: 'option',
+                                        attributes: { value: '1' },
+                                        content: 'SK1234567890123456789012'
+                                    },
+                                    {
+                                        tagName: 'option',
+                                        attributes: { value: '2' },
+                                        content: 'SK9876543210987654321098'
+                                    }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'issue-date':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label || 'Dátum vystavenia'}</label>
-                        <input type="date" class="form-control" data-gjs-type="date-input" name="${comp.name || 'issueDate'}" ${comp.required ? 'required' : ''}/>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label || 'Dátum vystavenia'
+                            },
+                            {
+                                tagName: 'input',
+                                attributes: {
+                                    type: 'date',
+                                    class: 'form-control',
+                                    'data-gjs-type': 'date-input',
+                                    name: comp.name || 'issueDate',
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'date-input',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name || 'issueDate' },
+                                    { type: 'text', name: 'displayName', value: comp.label || 'Dátum vystavenia' },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'variable-symbol':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label || 'Variabilný symbol'}</label>
-                        <input type="text" class="form-control" data-gjs-type="text-input" name="${comp.name || 'variableSymbol'}" ${comp.required ? 'required' : ''}/>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label || 'Variabilný symbol'
+                            },
+                            {
+                                tagName: 'input',
+                                attributes: {
+                                    type: 'text',
+                                    class: 'form-control',
+                                    'data-gjs-type': 'text-input',
+                                    name: comp.name || 'variableSymbol',
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'text-input',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name || 'variableSymbol' },
+                                    { type: 'text', name: 'displayName', value: comp.label || 'Variabilný symbol' },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'payment-method':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label || 'Spôsob úhrady'}</label>
-                        <select class="form-select" data-gjs-type="select" name="${comp.name || 'paymentMethod'}" ${comp.required ? 'required' : ''}>
-                            <option value="cash">Hotovosť</option>
-                            <option value="online">Online platba</option>
-                            <option value="cod">Dobierka</option>
-                        </select>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label || 'Spôsob úhrady'
+                            },
+                            {
+                                tagName: 'select',
+                                attributes: {
+                                    class: 'form-select',
+                                    'data-gjs-type': 'select',
+                                    name: comp.name || 'paymentMethod',
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'select',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name || 'paymentMethod' },
+                                    { type: 'text', name: 'displayName', value: comp.label || 'Spôsob úhrady' },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ],
+                                components: [
+                                    {
+                                        tagName: 'option',
+                                        attributes: { value: 'cash' },
+                                        content: 'Hotovosť'
+                                    },
+                                    {
+                                        tagName: 'option',
+                                        attributes: { value: 'online' },
+                                        content: 'Online platba'
+                                    },
+                                    {
+                                        tagName: 'option',
+                                        attributes: { value: 'cod' },
+                                        content: 'Dobierka'
+                                    }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'due-date':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label || 'Splatnosť'}</label>
-                        <div class="input-group">
-                            <input type="number" class="form-control" placeholder="Dní" data-gjs-type="due-date-days"/>
-                            <input type="date" class="form-control" data-gjs-type="due-date-date"/>
-                        </div>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label || 'Splatnosť'
+                            },
+                            {
+                                tagName: 'div',
+                                attributes: { class: 'input-group' },
+                                components: [
+                                    {
+                                        tagName: 'input',
+                                        attributes: {
+                                            type: 'number',
+                                            class: 'form-control',
+                                            placeholder: 'Dní',
+                                            'data-gjs-type': 'due-date-days'
+                                        }
+                                    },
+                                    {
+                                        tagName: 'input',
+                                        attributes: {
+                                            type: 'date',
+                                            class: 'form-control',
+                                            'data-gjs-type': 'due-date-date'
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        type: 'due-date',
+                        traits: [
+                            { type: 'text', name: 'name', value: comp.name || 'dueDateInfo' },
+                            { type: 'text', name: 'displayName', value: comp.label || 'Splatnosť' },
+                            { type: 'number', name: 'defaultDays', value: 14 },
+                            { type: 'checkbox', name: 'required', value: comp.required || false }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 case 'currency-rate':
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label || 'Mena / Kurz'}</label>
-                        <div class="input-group">
-                            <select class="form-select" style="flex: 0 0 auto; width: auto;" data-gjs-type="currency-rate-currency">
-                                <option value="EUR">EUR</option>
-                                <option value="CZK">CZK</option>
-                                <option value="USD">USD</option>
-                            </select>
-                            <input type="number" class="form-control" value="1.00" step="0.01" data-gjs-type="currency-rate-rate"/>
-                        </div>
-                    </div>`;
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label || 'Mena / Kurz'
+                            },
+                            {
+                                tagName: 'div',
+                                attributes: { class: 'input-group' },
+                                components: [
+                                    {
+                                        tagName: 'select',
+                                        attributes: {
+                                            class: 'form-select',
+                                            style: 'flex: 0 0 auto; width: auto;',
+                                            'data-gjs-type': 'currency-rate-currency'
+                                        },
+                                        components: [
+                                            {
+                                                tagName: 'option',
+                                                attributes: { value: 'EUR' },
+                                                content: 'EUR'
+                                            },
+                                            {
+                                                tagName: 'option',
+                                                attributes: { value: 'CZK' },
+                                                content: 'CZK'
+                                            },
+                                            {
+                                                tagName: 'option',
+                                                attributes: { value: 'USD' },
+                                                content: 'USD'
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        tagName: 'input',
+                                        attributes: {
+                                            type: 'number',
+                                            class: 'form-control',
+                                            value: '1.00',
+                                            step: '0.01',
+                                            'data-gjs-type': 'currency-rate-rate'
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        type: 'currency-rate',
+                        traits: [
+                            { type: 'text', name: 'name', value: comp.name || 'currencyRateInfo' },
+                            { type: 'text', name: 'displayName', value: comp.label || 'Mena/Kurz' },
+                            { type: 'select', name: 'defaultCurrency', value: 'EUR' },
+                            { type: 'checkbox', name: 'required', value: comp.required || false }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
                     break;
 
                 default:
                     // For unrecognized types, default to text input
-                    componentContent = `<div class="mb-3">
-                        <label class="form-label">${comp.label}</label>
-                        <input type="text" class="form-control" data-gjs-type="text-input" name="${comp.name}" ${comp.required ? 'required' : ''}/>
-                    </div>`;
-            }
-
-            // Add the component to the form container
-            if (componentContent) {
-                const components = formContainer.get('components');
-                const componentsLength = components ? components.length : 0;
-
-                this.editor?.DomComponents.addComponent({
-                    type: 'text',
-                    content: componentContent,
-                    attributes: { 'data-component-name': comp.name }
-                }, { at: componentsLength });
+                    component = this.editor?.DomComponents.addComponent({
+                        tagName: 'div',
+                        attributes: { class: 'mb-3' },
+                        components: [
+                            {
+                                tagName: 'label',
+                                attributes: { class: 'form-label' },
+                                content: comp.label
+                            },
+                            {
+                                tagName: 'input',
+                                attributes: {
+                                    type: 'text',
+                                    class: 'form-control',
+                                    'data-gjs-type': 'text-input',
+                                    name: comp.name,
+                                    ...(comp.required ? { required: true } : {})
+                                },
+                                type: 'text-input',
+                                traits: [
+                                    { type: 'text', name: 'name', value: comp.name },
+                                    { type: 'text', name: 'displayName', value: comp.label },
+                                    { type: 'checkbox', name: 'required', value: comp.required || false }
+                                ]
+                            }
+                        ]
+                    }, { at: formContainer.get('components')?.length || 0 });
             }
         });
     }
