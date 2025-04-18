@@ -36,6 +36,23 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+## Deployment to Azure Static Web Apps
+
+This project is configured for deployment to Azure Static Web Apps using GitHub Actions. The workflow is defined in `.github/workflows/azure-static-web-apps-deploy.yml`.
+
+### Configuration Notes
+
+1. The Angular budget limits have been increased in `angular.json` to accommodate the larger bundle size.
+2. CommonJS dependencies are explicitly allowed in the build configuration:
+   - grapesjs-blocks-basic
+   - grapesjs-plugin-forms
+   - grapesjs-preset-webpage
+   - localforage
+3. The GitHub Actions workflow has been modified to:
+   - Use Node.js 18.x
+   - Build the Angular application explicitly before deployment
+   - Skip the built-in build process of the Azure Static Web Apps deployment
+
 ## Running unit tests
 
 To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
