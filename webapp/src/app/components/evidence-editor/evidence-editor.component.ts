@@ -6,6 +6,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 
 import { CommonModule } from '@angular/common';
 import { EvidenceService } from '../../services/evidence.service';
+import { FormsModule } from '@angular/forms';
 import grapesjs from 'grapesjs';
 import grapesjsBlocksBasic from 'grapesjs-blocks-basic';
 import grapesjsPluginForms from 'grapesjs-plugin-forms';
@@ -18,7 +19,7 @@ interface Iban { id: string; value: string; }
 @Component({
     selector: 'app-evidence-editor',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [CommonModule, ReactiveFormsModule, FormsModule],
     template: `
         <div class="editor-container">
             <div class="toolbar p-3 border-bottom">
@@ -40,15 +41,55 @@ interface Iban { id: string; value: string; }
                         </select>
                     </div>
                     <div class="col-12">
-                        <button class="btn btn-primary"
+                        <button class="btn btn-primary me-2"
                                 (click)="saveEvidence()"
                                 [disabled]="!evidenceForm.valid">
                             <i class="bi bi-save"></i> Save
+                        </button>
+                        <button class="btn btn-outline-secondary"
+                                (click)="showAiDialog()">
+                            Try AI ✨
                         </button>
                     </div>
                 </form>
             </div>
             <div class="editor-content" id="gjs"></div>
+        </div>
+
+        <!-- AI Dialog -->
+        <div class="modal fade" id="aiDialog" tabindex="-1" aria-labelledby="aiDialogLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-dialog-scrollable modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="aiDialogLabel">Create Evidence with AI</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="aiPrompt" class="form-label">Describe the evidence you want to create:</label>
+                            <textarea class="form-control" id="aiPrompt" rows="5" [(ngModel)]="aiPrompt" placeholder="Example: Create an evidence for tracking mobile phones assigned to employees. Include fields for phone model, employee name, purchase date, assignment date, notes, purchase price, monthly plan cost, etc."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="openaiApiKey" class="form-label">OpenAI API Key:</label>
+                            <input type="password" class="form-control" id="openaiApiKey" [(ngModel)]="openaiApiKey" placeholder="sk-...">
+                            <div class="form-text">Your API key is stored in your browser's local storage.</div>
+                        </div>
+                        <div *ngIf="isGenerating" class="d-flex justify-content-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span class="ms-2">Generating evidence design...</span>
+                        </div>
+                        <div *ngIf="aiError" class="alert alert-danger">
+                            {{ aiError }}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" [disabled]="!aiPrompt || !openaiApiKey || isGenerating" (click)="generateEvidenceWithAI()">Generate</button>
+                    </div>
+                </div>
+            </div>
         </div>
     `,
     styles: [`
@@ -101,6 +142,13 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
     private evidenceId: string | null = null;
     categories: Category[] = [];
 
+    // AI evidence generation properties
+    aiPrompt: string = '';
+    openaiApiKey: string = '';
+    isGenerating: boolean = false;
+    aiError: string | null = null;
+    private aiDialog: any; // Will hold the Bootstrap modal reference
+
     constructor(
         private fb: FormBuilder,
         private evidenceService: EvidenceService,
@@ -122,6 +170,9 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                 this.loadEvidence(params['id']);
             }
         });
+
+        // Load OpenAI API key from localStorage if available
+        this.openaiApiKey = localStorage.getItem('openaiApiKey') || '';
     }
 
     ngOnDestroy(): void {
@@ -763,6 +814,350 @@ body {
     private loadCategories(): void {
         this.evidenceService.getAllCategories().subscribe(categories => {
             this.categories = categories;
+        });
+    }
+
+    // AI Dialog Methods
+    showAiDialog(): void {
+        // Initialize modal if not already done
+        if (!this.aiDialog) {
+            this.aiDialog = new (window as any).bootstrap.Modal(document.getElementById('aiDialog'));
+        }
+        this.aiError = null;
+        this.aiDialog.show();
+    }
+
+    generateEvidenceWithAI(): void {
+        if (!this.aiPrompt || !this.openaiApiKey) return;
+
+        // Save API key to localStorage
+        localStorage.setItem('openaiApiKey', this.openaiApiKey);
+
+        this.isGenerating = true;
+        this.aiError = null;
+
+        // Craft the prompt with information about available components
+        const systemPrompt = this.createSystemPrompt();
+
+        // Call OpenAI API
+        this.callOpenAI(systemPrompt, this.aiPrompt)
+            .then(response => {
+                try {
+                    // Process the response and create the evidence
+                    this.processAiResponse(response);
+                    // Close the dialog
+                    this.aiDialog.hide();
+                } catch (err) {
+                    this.aiError = `Error processing AI response: ${err instanceof Error ? err.message : String(err)}`;
+                }
+            })
+            .catch(error => {
+                this.aiError = `Error calling OpenAI API: ${error.message || 'Unknown error'}`;
+            })
+            .finally(() => {
+                this.isGenerating = false;
+            });
+    }
+
+    private createSystemPrompt(): string {
+        return `You are an expert in designing evidence forms for a business application.
+        Your task is to create an evidence structure based on the user's description.
+
+        Available Form Components:
+        1. Text Input - For general text values
+        2. Number Input - For numeric values
+        3. Date Input - For date values
+        4. Select - For dropdown selections
+        5. Textarea - For larger text content
+        6. Checkbox - For boolean values
+        7. Radio Button - For single selection from a group
+        8. Partner Select - For selecting business partners/customers
+
+        Special Components:
+        - IBAN Selector - For bank account selection
+        - Issue Date - Standard date field for document issuance
+        - Variable Symbol - For payment reference numbers
+        - Payment Method - Dropdown for payment types
+        - Due Date - Combined number of days and date
+        - Currency/Rate - For currency selection and exchange rate
+
+        Your response should be valid JSON with the following structure:
+        {
+          "name": "Form name based on description",
+          "components": [
+            {
+              "type": "text-input|number-input|date-input|select|textarea|checkbox-input|radio-input|partner-select|etc",
+              "name": "fieldName",
+              "label": "Field Label",
+              "required": true|false,
+              "options": ["option1", "option2"] // Only for select, radio
+            }
+          ]
+        }
+
+        Rules:
+        - Create appropriate field names (camelCase, no spaces)
+        - Determine which fields should be required
+        - For select/dropdown fields, provide reasonable options
+        - Order fields logically
+        - Only include components from the available list
+        - Determine the most appropriate component type for each field
+        - Respond ONLY with the JSON, no other text`;
+    }
+
+    private async callOpenAI(systemPrompt: string, userPrompt: string): Promise<any> {
+        const url = 'https://api.openai.com/v1/chat/completions';
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.openaiApiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4-turbo-preview', // Using GPT-4 for better results
+                messages: [
+                    {
+                        role: 'system',
+                        content: systemPrompt
+                    },
+                    {
+                        role: 'user',
+                        content: userPrompt
+                    }
+                ],
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || `HTTP error ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    }
+
+    private processAiResponse(responseText: string): void {
+        // Try to parse the JSON response
+        let formDefinition;
+        try {
+            // Extract JSON if it's wrapped in markdown code blocks
+            if (responseText.includes('```json')) {
+                const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/);
+                if (jsonMatch && jsonMatch[1]) {
+                    formDefinition = JSON.parse(jsonMatch[1]);
+                } else {
+                    formDefinition = JSON.parse(responseText);
+                }
+            } else {
+                formDefinition = JSON.parse(responseText);
+            }
+        } catch (e) {
+            throw new Error('Failed to parse AI response as JSON');
+        }
+
+        if (!formDefinition || !formDefinition.components || !Array.isArray(formDefinition.components)) {
+            throw new Error('Invalid AI response format');
+        }
+
+        // Update the form name
+        if (formDefinition.name) {
+            this.evidenceForm.patchValue({
+                name: formDefinition.name
+            });
+        }
+
+        // Clear existing content in the editor
+        if (this.editor) {
+            this.editor.DomComponents.clear();
+        }
+
+        // Add components to the editor
+        this.addComponentsToEditor(formDefinition.components);
+    }
+
+    private addComponentsToEditor(components: any[]): void {
+        if (!this.editor) return;
+
+        // Get the wrapper component to add components to
+        const wrapper = this.editor.DomComponents.getWrapper();
+        if (!wrapper) return;
+
+        // Add a container for the form
+        const formContainer = this.editor.DomComponents.addComponent({
+            tagName: 'div',
+            attributes: { class: 'container mt-4' }
+        }) as GrapesComponent;
+
+        // Process each component from the AI response
+        components.forEach(comp => {
+            let componentContent = '';
+
+            switch (comp.type) {
+                case 'text-input':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label}</label>
+                        <input type="text" class="form-control" data-gjs-type="text-input" name="${comp.name}" ${comp.required ? 'required' : ''}/>
+                    </div>`;
+                    break;
+
+                case 'number-input':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label}</label>
+                        <input type="number" class="form-control" data-gjs-type="number-input" name="${comp.name}" ${comp.required ? 'required' : ''}/>
+                    </div>`;
+                    break;
+
+                case 'date-input':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label}</label>
+                        <input type="date" class="form-control" data-gjs-type="date-input" name="${comp.name}" ${comp.required ? 'required' : ''}/>
+                    </div>`;
+                    break;
+
+                case 'select':
+                    let options = '';
+                    if (comp.options && Array.isArray(comp.options)) {
+                        options = comp.options.map((opt: string) =>
+                            `<option value="${opt.toLowerCase().replace(/\s+/g, '_')}">${opt}</option>`
+                        ).join('');
+                    }
+
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label}</label>
+                        <select class="form-select" data-gjs-type="select" name="${comp.name}" ${comp.required ? 'required' : ''}>
+                            <option value="">Select ${comp.label}</option>
+                            ${options}
+                        </select>
+                    </div>`;
+                    break;
+
+                case 'textarea':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label}</label>
+                        <textarea class="form-control" data-gjs-type="textarea" name="${comp.name}" ${comp.required ? 'required' : ''}></textarea>
+                    </div>`;
+                    break;
+
+                case 'checkbox-input':
+                    componentContent = `<div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" data-gjs-type="checkbox-input" name="${comp.name}" ${comp.required ? 'required' : ''}>
+                        <label class="form-check-label">
+                            ${comp.label}
+                        </label>
+                    </div>`;
+                    break;
+
+                case 'radio-input':
+                    let radioOptions = '';
+                    if (comp.options && Array.isArray(comp.options)) {
+                        radioOptions = comp.options.map((opt: string, idx: number) =>
+                            `<div class="form-check">
+                                <input class="form-check-input" type="radio" name="${comp.name}"
+                                       id="${comp.name}_${idx}" value="${opt.toLowerCase().replace(/\s+/g, '_')}"
+                                       data-gjs-type="radio-input" ${idx === 0 && comp.required ? 'required' : ''}>
+                                <label class="form-check-label" for="${comp.name}_${idx}">
+                                    ${opt}
+                                </label>
+                            </div>`
+                        ).join('');
+                    }
+
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label d-block">${comp.label}</label>
+                        ${radioOptions}
+                    </div>`;
+                    break;
+
+                case 'partner-select':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label}</label>
+                        <select class="form-select" data-gjs-type="partner-select" name="${comp.name}" ${comp.required ? 'required' : ''}></select>
+                    </div>`;
+                    break;
+
+                // Handle special economic fields
+                case 'iban-select':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label || 'IBAN / Číslo účtu'}</label>
+                        <select class="form-select" data-gjs-type="select" name="${comp.name || 'ibanId'}" ${comp.required ? 'required' : ''}>
+                            <option value="">Vyberte IBAN...</option>
+                            <option value="1">SK1234567890123456789012</option>
+                            <option value="2">SK9876543210987654321098</option>
+                        </select>
+                    </div>`;
+                    break;
+
+                case 'issue-date':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label || 'Dátum vystavenia'}</label>
+                        <input type="date" class="form-control" data-gjs-type="date-input" name="${comp.name || 'issueDate'}" ${comp.required ? 'required' : ''}/>
+                    </div>`;
+                    break;
+
+                case 'variable-symbol':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label || 'Variabilný symbol'}</label>
+                        <input type="text" class="form-control" data-gjs-type="text-input" name="${comp.name || 'variableSymbol'}" ${comp.required ? 'required' : ''}/>
+                    </div>`;
+                    break;
+
+                case 'payment-method':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label || 'Spôsob úhrady'}</label>
+                        <select class="form-select" data-gjs-type="select" name="${comp.name || 'paymentMethod'}" ${comp.required ? 'required' : ''}>
+                            <option value="cash">Hotovosť</option>
+                            <option value="online">Online platba</option>
+                            <option value="cod">Dobierka</option>
+                        </select>
+                    </div>`;
+                    break;
+
+                case 'due-date':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label || 'Splatnosť'}</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" placeholder="Dní" data-gjs-type="due-date-days"/>
+                            <input type="date" class="form-control" data-gjs-type="due-date-date"/>
+                        </div>
+                    </div>`;
+                    break;
+
+                case 'currency-rate':
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label || 'Mena / Kurz'}</label>
+                        <div class="input-group">
+                            <select class="form-select" style="flex: 0 0 auto; width: auto;" data-gjs-type="currency-rate-currency">
+                                <option value="EUR">EUR</option>
+                                <option value="CZK">CZK</option>
+                                <option value="USD">USD</option>
+                            </select>
+                            <input type="number" class="form-control" value="1.00" step="0.01" data-gjs-type="currency-rate-rate"/>
+                        </div>
+                    </div>`;
+                    break;
+
+                default:
+                    // For unrecognized types, default to text input
+                    componentContent = `<div class="mb-3">
+                        <label class="form-label">${comp.label}</label>
+                        <input type="text" class="form-control" data-gjs-type="text-input" name="${comp.name}" ${comp.required ? 'required' : ''}/>
+                    </div>`;
+            }
+
+            // Add the component to the form container
+            if (componentContent) {
+                const components = formContainer.get('components');
+                const componentsLength = components ? components.length : 0;
+
+                this.editor?.DomComponents.addComponent({
+                    type: 'text',
+                    content: componentContent,
+                    attributes: { 'data-component-name': comp.name }
+                }, { at: componentsLength });
+            }
         });
     }
 }
