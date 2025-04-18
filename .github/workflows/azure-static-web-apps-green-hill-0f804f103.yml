@@ -38,8 +38,16 @@ jobs:
           echo "Checking browser directory contents:"
           ls -la webapp/dist/webapp/browser
           
-          echo "Checking for index.html:"
-          find . -name "index.html" | sort
+          echo "Checking for index.html and routes.json:"
+          find webapp -name "index.html" -o -name "routes.json" | sort
+          
+          echo "Checking if routes.json was copied to build output:"
+          if [ -f webapp/dist/webapp/browser/routes.json ]; then
+            echo "routes.json exists in build output"
+            cat webapp/dist/webapp/browser/routes.json | head -5
+          else
+            echo "WARNING: routes.json not found in build output"
+          fi
       - name: Prepare Deployment
         run: |
           echo "Creating clean output directory:"
@@ -53,24 +61,16 @@ jobs:
           find output_static_webapp -name "*.br" -delete
           find output_static_webapp -name "*.gz" -delete
           
-          echo "Verifying output_static_webapp contents after copy:"
+          echo "Verifying output_static_webapp contents:"
           ls -la output_static_webapp/
           
-          echo "Content of index.html:"
-          cat output_static_webapp/index.html | head -10
-      - name: Create routes.json
-        run: |
-          echo "Creating routes.json for SPA routing:"
-          echo '{
-            "routes": [
-              {
-                "route": "/*",
-                "serve": "/index.html",
-                "statusCode": 200
-              }
-            ]
-          }' > output_static_webapp/routes.json
-          cat output_static_webapp/routes.json
+          echo "Checking for routes.json in output directory:"
+          if [ -f output_static_webapp/routes.json ]; then
+            echo "SUCCESS: routes.json exists in output_static_webapp/"
+          else
+            echo "WARNING: routes.json not found in output directory, copying from source"
+            cp -v webapp/routes.json output_static_webapp/
+          fi
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
