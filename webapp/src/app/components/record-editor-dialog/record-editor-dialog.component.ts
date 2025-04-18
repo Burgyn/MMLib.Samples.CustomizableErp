@@ -463,6 +463,23 @@ export class RecordEditorDialogComponent implements OnInit {
                     return selectHtml + detailsDivHtml;
                 }
 
+                // Special handling for iban-select - use original children or options from the component definition
+                if (tagName === 'select' && attributesObj['data-gjs-type'] === 'iban-select') {
+                    // We should not need this anymore, but keep it in case there are old forms that used it
+                    console.log('Found old iban-select component - consider updating your form to regular select');
+
+                    // Use hardcoded IBAN options
+                    childrenHtml = `
+                        <option value="">Vyberte IBAN...</option>
+                        <option value="1">SK1234567890123456789012</option>
+                        <option value="2">SK9876543210987654321098</option>
+                        <option value="3">SK4567890123456789012345</option>
+                        <option value="4">SK7890123456789012345678</option>
+                    `;
+
+                    return `<${tagName} ${attributes.trim()}>${childrenHtml}</${tagName}>`;
+                }
+
                 // Default return for components not handled above (including selects without data-partners)
                 return `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
             };

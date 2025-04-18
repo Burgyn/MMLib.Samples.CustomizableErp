@@ -243,9 +243,15 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
                         media: '<i class="bi bi-bank fs-4"></i>',
                         content: `<div class="mb-3">
                             <label class="form-label">IBAN / Číslo účtu</label>
-                            <select class="form-select" data-gjs-type="iban-select"></select>
+                            <select class="form-select" data-gjs-type="select" name="ibanId">
+                                <option value="">Vyberte IBAN...</option>
+                                <option value="1">SK1234567890123456789012</option>
+                                <option value="2">SK9876543210987654321098</option>
+                                <option value="3">SK4567890123456789012345</option>
+                                <option value="4">SK7890123456789012345678</option>
+                            </select>
                         </div>`,
-                        attributes: { 'data-gjs-type': 'iban-select', 'data-gjs-displayName': 'IBAN / Číslo účtu' }
+                        attributes: { 'data-gjs-type': 'select', 'data-gjs-name': 'ibanId', 'data-gjs-displayName': 'IBAN / Číslo účtu' }
                     },
                      {
                         id: 'issue-date-block',
@@ -567,72 +573,35 @@ body {
                 }
             },
              view: { // View logic runs in the editor context
-                 init() {
-                     this.listenTo(this.model, 'change:attributes', this['handleDataResponse']);
-                     // Add a unique ID attribute to the element in the canvas for correlation
-                     const componentId = this.model.getId();
-                     this.model.addAttributes({ 'data-gjs-comp-id': componentId });
-                 },
-                 handleDataResponse(model: GrapesComponent, attributes: any) {
-                    // This check is basic, might need refinement if attributes change often
-                     if (attributes['data-partners']) {
-                         const partners = JSON.parse(attributes['data-partners']);
-                         const selectEl = this.el.querySelector('select');
-                         if (selectEl) {
-                             selectEl.innerHTML = '<option value="">Vyberte partnera...</option>'; // Clear previous
-                             partners.forEach((p: Partner) => {
-                                 const option = document.createElement('option');
-                                 option.value = p.id;
-                                 option.textContent = p.name;
-                                 selectEl.appendChild(option);
-                             });
-                             // Remove the temporary attribute
-                             model.removeAttributes('data-partners');
-                         }
-                     }
-                      if (attributes['data-ibans']) {
-                         const ibans = JSON.parse(attributes['data-ibans']);
-                         const selectEl = this.el.querySelector('select');
-                         if (selectEl) {
-                             selectEl.innerHTML = '<option value="">Vyberte IBAN...</option>'; // Clear previous
-                             ibans.forEach((i: Iban) => {
-                                 const option = document.createElement('option');
-                                 option.value = i.id; // Or i.value?
-                                 option.textContent = i.value;
-                                 selectEl.appendChild(option);
-                             });
-                             model.removeAttributes('data-ibans');
-                         }
-                     }
-                 },
-                 // Need a mechanism to trigger data fetch again if needed
-             }
-        });
-
-         // New Component Type: iban-select (very similar to partner-select)
-        this.editor.DomComponents.addType('iban-select', {
-            extend: 'partner-select', // Inherit model/view from partner-select
-            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'iban-select',
-            model: {
-                defaults: {
-                    // Override default traits if needed
-                    traits: [
-                        { type: 'text', name: 'name', label: 'Field Name (ID)', default: 'ibanId' },
-                        { type: 'text', name: 'displayName', label: 'Display Name', default: 'Číslo účtu' },
-                        { type: 'checkbox', name: 'required', label: 'Required' }
-                    ],
-                     script: function() {
-                        const selectElement = this as unknown as HTMLSelectElement;
-                        const componentId = selectElement.getAttribute('data-gjs-comp-id');
-                        window.parent.postMessage({ type: 'fetchIbans', componentId: componentId }, '*');
+                init() {
+                    this.listenTo(this.model, 'change:attributes', this['handleDataResponse']);
+                    // Add a unique ID attribute to the element in the canvas for correlation
+                    const componentId = this.model.getId();
+                    this.model.addAttributes({ 'data-gjs-comp-id': componentId });
+                },
+                handleDataResponse(model: GrapesComponent, attributes: any) {
+                   // This check is basic, might need refinement if attributes change often
+                    if (attributes['data-partners']) {
+                        const partners = JSON.parse(attributes['data-partners']);
+                        const selectEl = this.el.querySelector('select');
+                        if (selectEl) {
+                            selectEl.innerHTML = '<option value="">Vyberte partnera...</option>'; // Clear previous
+                            partners.forEach((p: Partner) => {
+                                const option = document.createElement('option');
+                                option.value = p.id;
+                                option.textContent = p.name;
+                                selectEl.appendChild(option);
+                            });
+                            // Remove the temporary attribute
+                            model.removeAttributes('data-partners');
+                        }
                     }
-                }
-            },
-             view: { // Inherits init and handleDataResponse, might not need changes unless logic differs
-             }
+                },
+                // Need a mechanism to trigger data fetch again if needed
+            }
         });
 
-         // New Component Type: due-date (composite)
+        // New Component Type: due-date (composite)
         this.editor.DomComponents.addType('due-date', {
              isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'due-date',
              model: {
@@ -690,14 +659,8 @@ body {
                 });
             }
 
-            if (type === 'fetchIbans' && componentId && this.editor) {
-                this.evidenceService.getIbans().subscribe(ibans => {
-                    const component = this.editor?.DomComponents.componentsById[componentId];
-                    if (component) {
-                         component.addAttributes({ 'data-ibans': JSON.stringify(ibans) });
-                    }
-                });
-            }
+            // We've removed the IBAN-select component in favor of a regular select
+            // No need to fetch IBAN data anymore
         });
     }
 
@@ -757,7 +720,7 @@ body {
 
                 // Special handling for composite types if needed
                 let finalType = componentTypeAttr;
-                 if ([ 'partner-select', 'iban-select', 'due-date', 'currency-rate'].includes(finalType)) {
+                 if ([ 'partner-select', 'due-date', 'currency-rate'].includes(finalType)) {
                     // Decide how to represent composite types in the grid
                     // For now, treat them as string (displaying the selected value or main identifier)
                     finalType = 'string';
@@ -790,7 +753,6 @@ body {
             case 'checkbox-input':
                 return 'boolean';
              // case 'partner-select': // Already handled above, mapping to string
-             // case 'iban-select':
              // case 'due-date':
              // case 'currency-rate':
             default:
