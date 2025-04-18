@@ -33,24 +33,12 @@ jobs:
         run: |
           cd webapp
           npm run build
-      - name: Enhanced Debug - Verify all files
+      - name: Debug - Verify files
         run: |
-          echo "Workspace contents:"
-          ls -la
-          
-          echo "Checking webapp directory:"
-          ls -la webapp
-          
-          echo "Checking if dist exists:"
-          ls -la webapp/dist
-          
-          echo "Checking dist/webapp contents:"
-          ls -la webapp/dist/webapp
-          
           echo "Checking browser directory contents:"
           ls -la webapp/dist/webapp/browser
           
-          echo "Checking specifically for index.html:"
+          echo "Checking for index.html:"
           find . -name "index.html" | sort
       - name: Prepare Deployment
         run: |
@@ -61,37 +49,41 @@ jobs:
           echo "Copying browser subdirectory contents to root of output directory:"
           cp -rv webapp/dist/webapp/browser/* output_static_webapp/
           
-          echo "Copying any other required assets from original build:"
-          if [ -d webapp/dist/webapp/assets ]; then
-            cp -rv webapp/dist/webapp/assets output_static_webapp/
-          fi
+          echo "Removing any potential problematic files:"
+          find output_static_webapp -name "*.br" -delete
+          find output_static_webapp -name "*.gz" -delete
           
           echo "Verifying output_static_webapp contents after copy:"
           ls -la output_static_webapp/
           
-          echo "Checking specifically for index.html in output directory:"
-          if [ -f output_static_webapp/index.html ]; then
-            echo "SUCCESS: index.html exists in output_static_webapp/"
-            cat output_static_webapp/index.html | head -5
-          else
-            echo "ERROR: index.html still NOT found in output_static_webapp/"
-            echo "Creating minimal index.html as fallback:"
-            echo '<!DOCTYPE html><html><head><title>Test Page</title></head><body><h1>Hello World</h1></body></html>' > output_static_webapp/index.html
-            ls -la output_static_webapp/
-          fi
+          echo "Content of index.html:"
+          cat output_static_webapp/index.html | head -10
+      - name: Create routes.json
+        run: |
+          echo "Creating routes.json for SPA routing:"
+          echo '{
+            "routes": [
+              {
+                "route": "/*",
+                "serve": "/index.html",
+                "statusCode": 200
+              }
+            ]
+          }' > output_static_webapp/routes.json
+          cat output_static_webapp/routes.json
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_GREEN_HILL_0F804F103 }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          app_location: "./output_static_webapp" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "" # Built app content directory - optional
+          app_location: "./output_static_webapp"
+          api_location: ""
+          output_location: ""
           skip_app_build: true
-          ###### End of Repository/Build Configurations ######
+          production_branch: "main"
+          deployment_environment: "production"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
