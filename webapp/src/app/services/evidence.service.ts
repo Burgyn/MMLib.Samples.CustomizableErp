@@ -1,5 +1,5 @@
 import { Category, Evidence, EvidenceRecord } from '../models/evidence.model';
-import { Observable, Subject, from, of } from 'rxjs';
+import { Observable, Subject, forkJoin, from, of } from 'rxjs';
 import { map, switchMap, tap } from 'rxjs/operators';
 
 import { Injectable } from '@angular/core';
@@ -12,6 +12,15 @@ interface PartnerDetails {
     address?: string;
     ico?: string;
     ic_dph?: string;
+}
+
+// Define export data interfaces
+export interface ExportData {
+    categories: Category[];
+    evidences: Evidence[];
+    recordsByEvidence: { [evidenceId: string]: EvidenceRecord[] };
+    exportDate: string;
+    version: string;
 }
 
 @Injectable({
@@ -170,6 +179,84 @@ export class EvidenceService {
 
     deleteRecord(evidenceId: string, recordId: string): Observable<void> {
         return from(this.recordsStore.removeItem(`${evidenceId}::${recordId}`));
+    }
+
+    // --- Export/Import Functionality ---
+
+    /**
+     * Exports all evidences and their records
+     */
+    exportAllData(): Observable<{
+        evidences: Evidence[];
+        recordsByEvidence: { [evidenceId: string]: EvidenceRecord[] };
+    }> {
+        return this.getAllEvidences().pipe(
+            switchMap(evidences => {
+                // Create an observable for each evidence's records
+                const recordObservables = evidences.map(evidence =>
+                    this.getRecords(evidence.id).pipe(
+                        map(records => ({ evidenceId: evidence.id, records }))
+                    )
+                );
+
+                // Combine all record observables
+                return forkJoin(recordObservables).pipe(
+                    map(recordResults => {
+                        // Create a map of evidenceId -> records[]
+                        const recordsByEvidence: { [evidenceId: string]: EvidenceRecord[] } = {};
+                        recordResults.forEach(result => {
+                            recordsByEvidence[result.evidenceId] = result.records;
+                        });
+
+                        return {
+                            evidences,
+                            recordsByEvidence
+                        };
+                    })
+                );
+            })
+        );
+    }
+
+    /**
+     * Imports all evidences and their records from export data
+     */
+    importAllData(importData: ExportData): Observable<void> {
+        // First, import all categories
+        const categoryImports = importData.categories.map(category =>
+            this.saveCategory(category)
+        );
+
+        // Then, import all evidences
+        const evidenceImports = importData.evidences.map(evidence =>
+            this.saveEvidence(evidence)
+        );
+
+        // Finally, import all records
+        const recordImports: Observable<EvidenceRecord>[] = [];
+        Object.entries(importData.recordsByEvidence).forEach(([evidenceId, records]) => {
+            records.forEach(record => {
+                // Make sure the record has the correct evidenceId
+                record.evidenceId = evidenceId;
+                recordImports.push(this.saveRecord(evidenceId, record));
+            });
+        });
+
+        // Combine all imports into a single observable
+        return forkJoin([
+            ...categoryImports,
+            ...evidenceImports,
+            ...recordImports
+        ]).pipe(
+            map(() => {
+                // Notify subscribers that data has changed
+                this.categoryChanged.next();
+                this.evidenceChanged.next();
+
+                // Return void
+                return;
+            })
+        );
     }
 
     // --- Dummy Data for Selectors ---
