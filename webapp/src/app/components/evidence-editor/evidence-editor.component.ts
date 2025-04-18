@@ -881,24 +881,27 @@ body {
         - Due Date - Combined number of days and date
         - Currency/Rate - For currency selection and exchange rate
 
+        IMPORTANT: Use Slovak language for all labels and display names, but keep field names in English camelCase.
+
         Your response should be valid JSON with the following structure:
         {
-          "name": "Form name based on description",
+          "name": "Form name in Slovak",
           "components": [
             {
               "type": "text-input|number-input|date-input|select|textarea|checkbox-input|radio-input|partner-select|etc",
-              "name": "fieldName",
-              "label": "Field Label",
+              "name": "fieldNameInEnglish",
+              "label": "Field Label in Slovak",
               "required": true|false,
-              "options": ["option1", "option2"] // Only for select, radio
+              "options": ["Option1 in Slovak", "Option2 in Slovak"] // Only for select, radio
             }
           ]
         }
 
         Rules:
-        - Create appropriate field names (camelCase, no spaces)
+        - Create appropriate field names in English (camelCase, no spaces)
+        - Create all labels and display names in Slovak language
         - Determine which fields should be required
-        - For select/dropdown fields, provide reasonable options
+        - For select/dropdown fields, provide reasonable options in Slovak
         - Order fields logically
         - Only include components from the available list
         - Determine the most appropriate component type for each field
