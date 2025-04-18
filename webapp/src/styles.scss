@@ -440,6 +440,50 @@ body.soft-dark-theme {
   .record-editor-dialog .nav-tabs .nav-item {
     margin-bottom: -1px;
   }
+
+  // Subitem editor dialog styles
+  .subitem-editor-dialog {
+    background-color: var(--component-bg) !important;
+    color: var(--text-color) !important;
+  }
+
+  .subitem-editor-dialog .dialog-header {
+    background-color: var(--component-bg) !important;
+  }
+
+  .subitem-editor-dialog .dialog-header h2 {
+    color: var(--text-color) !important;
+  }
+
+  .subitem-editor-dialog .content-panel {
+    background-color: var(--component-bg) !important;
+  }
+
+  .subitem-editor-dialog input,
+  .subitem-editor-dialog select,
+  .subitem-editor-dialog textarea {
+    background-color: var(--component-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  .subitem-editor-dialog .form-check-input {
+    background-color: var(--component-bg) !important;
+    border-color: var(--border-color) !important;
+  }
+
+  .subitem-editor-dialog .form-check-input:checked {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+  }
+
+  .subitem-editor-dialog .form-label {
+    color: var(--text-color) !important;
+  }
+
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    background-color: var(--component-bg) !important;
+  }
 }
 
 // Dialog styles
@@ -768,4 +812,17 @@ body.dark-green-theme, body.dark-orange-theme, body.soft-dark-theme {
 .dark-orange-theme .loading-overlay,
 .soft-dark-theme .loading-overlay {
     background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Dialog container styles */
+.mat-mdc-dialog-container {
+  --mdc-dialog-container-color: var(--component-bg);
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  color: var(--text-color) !important;
+}
+
+.mat-mdc-dialog-container .mdc-dialog__surface {
+  background-color: var(--component-bg) !important;
+  color: var(--text-color) !important;
 }

@@ -74,24 +74,32 @@ import { SubitemDefinition, SubitemRecord } from '../../models/evidence.model';
     styles: [`
         .subitem-editor-dialog {
             min-width: 500px;
-            background: #fff;
+            background: var(--component-bg);
             border-radius: 0.375rem;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--border-color);
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            color: var(--text-color);
         }
 
         .dialog-header {
             padding: 1rem 1.5rem;
-            background: #fff;
+            background: var(--component-bg);
             flex-shrink: 0;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dialog-header h2 {
+            color: var(--text-color);
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 0;
         }
 
         .content-panel {
-            background-color: #fff;
+            background-color: var(--component-bg);
             padding: 1.5rem;
             border-radius: 0.375rem;
         }
@@ -99,14 +107,45 @@ import { SubitemDefinition, SubitemRecord } from '../../models/evidence.model';
         .form-label {
             font-size: 0.875rem;
             font-weight: 500;
-            color: #6c757d;
+            color: var(--text-color);
             margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            background-color: var(--component-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.25);
+        }
+
+        .form-check-input {
+            background-color: var(--component-bg);
+            border-color: var(--border-color);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
         }
 
         .dialog-actions {
             padding: 1rem 1.5rem;
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
+            background: var(--component-bg);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
         }
     `]
 })
