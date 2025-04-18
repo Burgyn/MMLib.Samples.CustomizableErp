@@ -1,6 +1,7 @@
 import { Category, Evidence, EvidenceRecord } from './models/evidence.model';
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Component, ElementRef, ViewChild, OnInit } from '@angular/core';
 import { EvidenceService, ExportData } from './services/evidence.service';
+import { ThemeService } from './services/theme.service';
 
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
@@ -18,6 +19,12 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
                     <span class="ms-2">Super EShop</span>
                 </div>
                 <div class="header-actions">
+                    <!-- Theme toggle button -->
+                    <button class="btn btn-link theme-toggle" (click)="toggleTheme()" [title]="isDarkTheme ? 'Prepnúť na svetlý režim' : 'Prepnúť na tmavý režim'">
+                        <i *ngIf="isDarkTheme" class="bi bi-sun-fill"></i>
+                        <i *ngIf="!isDarkTheme" class="bi bi-moon-fill"></i>
+                    </button>
+
                     <!-- Export/Import buttons -->
                     <button class="btn btn-link" (click)="exportAllData()" title="Exportovať všetky dáta">
                         <i class="bi bi-download"></i>
@@ -62,12 +69,13 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
 
         .app-header {
             height: 56px;
-            background: #fff;
-            border-bottom: 1px solid #dee2e6;
+            background: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 1rem;
+            transition: background-color 0.3s ease;
         }
 
         .brand {
@@ -75,7 +83,8 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
             align-items: center;
             font-size: 1.25rem;
             font-weight: 500;
-            color: #495057;
+            color: var(--text-color);
+            transition: color 0.3s ease;
         }
 
         .header-actions {
@@ -84,7 +93,7 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
         }
 
         .header-actions .btn-link {
-            color: #6c757d;
+            color: var(--text-muted);
             font-size: 1.25rem;
             padding: 0.25rem;
             display: flex;
@@ -94,7 +103,7 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
         }
 
         .header-actions .btn-link:hover {
-            color: #495057;
+            color: var(--text-color);
         }
 
         .app-content {
@@ -106,7 +115,8 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
         .main-content {
             flex: 1;
             overflow: auto;
-            background: #fff;
+            background: var(--component-bg);
+            transition: background-color 0.3s ease;
         }
 
         .loading-overlay {
@@ -122,15 +132,37 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
             justify-content: center;
             z-index: 9999;
         }
+
+        .dark-theme .loading-overlay {
+            background-color: rgba(0, 0, 0, 0.6);
+        }
     `]
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
     @ViewChild('importFileInput') importFileInput!: ElementRef<HTMLInputElement>;
     title = 'Customizable ERP';
     isLoading = false;
     loadingMessage = 'Prosím čakajte...';
+    isDarkTheme = false;
 
-    constructor(private evidenceService: EvidenceService) {}
+    constructor(
+        private evidenceService: EvidenceService,
+        private themeService: ThemeService
+    ) {}
+
+    ngOnInit(): void {
+        // Subscribe na zmeny témy
+        this.themeService.currentTheme$.subscribe(theme => {
+            this.isDarkTheme = theme === 'dark';
+        });
+    }
+
+    /**
+     * Prepína medzi svetlou a tmavou témou
+     */
+    toggleTheme(): void {
+        this.themeService.toggleTheme();
+    }
 
     /**
      * Exports all application data (evidences and records)

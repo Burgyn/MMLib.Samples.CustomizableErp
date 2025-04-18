@@ -64,11 +64,12 @@ interface MenuCategory extends Category {
         .side-menu {
             width: 280px;
             height: 100%;
-            background: #f8f9fa;
-            border-right: 1px solid #dee2e6;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             padding: 1rem;
+            transition: background-color 0.3s ease;
         }
 
         .menu-header {
@@ -88,12 +89,12 @@ interface MenuCategory extends Category {
             padding: 0.5rem;
             display: flex;
             align-items: center;
-            color: #495057;
+            color: var(--text-color);
             border-radius: 4px;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, color 0.3s ease;
 
             &:hover {
-                background-color: #e9ecef;
+                background-color: var(--light-color);
             }
 
             .category-actions {
@@ -120,32 +121,33 @@ interface MenuCategory extends Category {
             display: flex;
             align-items: center;
             padding: 0.5rem;
-            color: #495057;
+            color: var(--text-muted);
             text-decoration: none;
             border-radius: 4px;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, color 0.3s ease;
 
             &:hover {
-                background-color: #e9ecef;
-                color: #495057;
+                background-color: var(--light-color);
+                color: var(--text-color);
             }
 
             &.active {
-                background-color: #e7f1ff;
-                color: #0d6efd;
+                background-color: rgba(61, 139, 253, 0.2);
+                color: var(--primary-color);
             }
         }
 
         .btn-link {
             padding: 0.25rem;
-            color: #6c757d;
+            color: var(--text-muted);
+            transition: color 0.3s ease;
 
             &:hover {
-                color: #0d6efd;
+                color: var(--primary-color);
             }
 
             &.text-danger:hover {
-                color: #dc3545 !important;
+                color: var(--danger-color) !important;
             }
         }
     `]
