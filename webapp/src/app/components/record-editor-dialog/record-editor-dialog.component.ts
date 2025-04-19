@@ -2,7 +2,7 @@ import { Component, Inject, OnInit, ViewChild, ElementRef } from '@angular/core'
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
-import { Evidence, EvidenceRecord, SubitemDefinition, SubitemRecord } from '../../models/evidence.model';
+import { Evidence, EvidenceRecord, SubitemDefinition, SubitemRecord, FormRule, RuleAction, RuleCondition } from '../../models/evidence.model';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { AgGridModule } from 'ag-grid-angular';
 import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-editor-dialog.component';
@@ -980,14 +980,17 @@ export class RecordEditorDialogComponent implements OnInit {
                 if (target.tagName === 'SELECT' && this.partnerDataMap[name]) {
                     this.updatePartnerDetails(target as HTMLSelectElement);
                 }
+
+                // Apply form rules after value changes
+                this.applyFormRules();
             });
 
-            // Set initial displayed value for edit mode (redundant due to form control init, but good practice)
+            // Set initial displayed value for edit mode
             if (this.data.mode === 'edit' && this.data.record) {
                 const value = this.data.record.data[name];
                 if (htmlInput.type === 'checkbox' && htmlInput instanceof HTMLInputElement) {
                     htmlInput.checked = !!value;
-                } else if (htmlInput.tagName !== 'SELECT') { // Don't reset select value here
+                } else if (htmlInput.tagName !== 'SELECT') {
                     htmlInput.value = value || '';
                 }
             }
@@ -995,8 +998,7 @@ export class RecordEditorDialogComponent implements OnInit {
 
         this.recordForm = this.fb.group(formControls);
 
-        // Set initial values for SELECT elements specifically AFTER form group is created
-        // This ensures Angular form control is aware of the value
+        // Set initial values for SELECT elements
         if (this.data.mode === 'edit' && this.data.record) {
              inputs.forEach((input: Element) => {
                 if (input.tagName === 'SELECT') {
@@ -1008,6 +1010,9 @@ export class RecordEditorDialogComponent implements OnInit {
                 }
             });
         }
+
+        // Apply initial form rules
+        this.applyFormRules();
     }
 
     private updateInitialPartnerDetails(): void {
@@ -1394,5 +1399,231 @@ export class RecordEditorDialogComponent implements OnInit {
             // Create a new array reference to trigger change detection in ag-grid
             this.subitems[fieldName] = [...this.subitems[fieldName]];
         }
+    }
+
+    /**
+     * Applies form rules based on current form values
+     */
+    private applyFormRules(): void {
+        if (!this.data.evidence.formRules || !this.formContainer) return;
+
+        const activeRules = this.data.evidence.formRules.filter(rule => rule.active);
+        if (activeRules.length === 0) return;
+
+        const formElements = this.formContainer.nativeElement.querySelectorAll('input, select, textarea');
+        const fields: { [key: string]: HTMLElement } = {};
+
+        // Build fields map
+        formElements.forEach((element: HTMLElement) => {
+            const name = element.getAttribute('name');
+            if (name) {
+                fields[name] = element;
+            }
+        });
+
+        // Evaluate and apply each rule
+        activeRules.forEach(rule => {
+            // Skip if no conditions (except for calculation rules)
+            if (rule.conditions.length === 0 && !rule.actions.some(a => a.type === 'calculate')) {
+                return;
+            }
+
+            // For calculation rules with no conditions, always apply
+            if (rule.conditions.length === 0 && rule.actions.some(a => a.type === 'calculate')) {
+                this.applyRuleActions(rule, fields);
+                return;
+            }
+
+            // Check if all conditions are met
+            const conditionsMet = rule.conditions.every(condition =>
+                this.evaluateCondition(condition, fields)
+            );
+
+            if (conditionsMet) {
+                this.applyRuleActions(rule, fields);
+            } else {
+                this.revertRuleActions(rule, fields);
+            }
+        });
+    }
+
+    /**
+     * Evaluates a single form rule condition
+     */
+    private evaluateCondition(condition: RuleCondition, fields: { [key: string]: HTMLElement }): boolean {
+        const field = fields[condition.fieldName];
+        if (!field) return false;
+
+        const element = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+        let fieldValue: string | number | boolean = element.type === 'checkbox' ?
+            (element as HTMLInputElement).checked :
+            element.value || '';  // Default to empty string if undefined
+        let testValue = condition.value || '';  // Default to empty string if undefined
+
+        // Type conversion for numeric comparisons
+        if (condition.operator === 'greaterThan' || condition.operator === 'lessThan') {
+            fieldValue = Number(fieldValue);
+            testValue = Number(testValue);
+
+            if (isNaN(fieldValue) || isNaN(testValue)) {
+                return false;
+            }
+        }
+
+        switch (condition.operator) {
+            case 'equals':
+                return String(fieldValue) === String(testValue);
+            case 'notEquals':
+                return String(fieldValue) !== String(testValue);
+            case 'contains':
+                return String(fieldValue).includes(String(testValue));
+            case 'notContains':
+                return !String(fieldValue).includes(String(testValue));
+            case 'greaterThan':
+                return typeof fieldValue === 'number' && typeof testValue === 'number' && fieldValue > testValue;
+            case 'lessThan':
+                return typeof fieldValue === 'number' && typeof testValue === 'number' && fieldValue < testValue;
+            case 'isEmpty':
+                return !fieldValue;
+            case 'isNotEmpty':
+                return !!fieldValue;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Applies the actions for a rule
+     */
+    private applyRuleActions(rule: FormRule, fields: { [key: string]: HTMLElement }): void {
+        rule.actions.forEach(action => {
+            const targetField = fields[action.targetField];
+            if (!targetField) return;
+
+            const element = targetField as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+            const container = this.getFieldContainer(targetField);
+
+            switch (action.type) {
+                case 'enable':
+                    element.disabled = false;
+                    break;
+                case 'disable':
+                    element.disabled = true;
+                    break;
+                case 'show':
+                    if (container) container.style.display = '';
+                    break;
+                case 'hide':
+                    if (container) container.style.display = 'none';
+                    break;
+                case 'setValue':
+                    if (element.type === 'checkbox') {
+                        // For checkboxes, convert value to boolean
+                        const boolValue = typeof action.value === 'boolean' ? action.value :
+                            typeof action.value === 'number' ? action.value === 1 :
+                            typeof action.value === 'string' ? action.value.toLowerCase() === 'true' : false;
+                        (element as HTMLInputElement).checked = boolValue;
+                    } else if (element.type === 'number') {
+                        // For number inputs, ensure we have a valid number or empty string
+                        const numValue = action.value === undefined || action.value === '' ? '' : String(Number(action.value));
+                        element.value = numValue;
+                    } else {
+                        // For all other inputs, convert to string
+                        element.value = action.value !== undefined ? String(action.value) : '';
+                    }
+                    // Trigger change event
+                    element.dispatchEvent(new Event('change', { bubbles: true }));
+                    break;
+                case 'calculate':
+                    if (action.formula) {
+                        const result = this.calculateFormula(action.formula, fields);
+                        if (result !== null) {
+                            element.value = String(result);
+                            // Trigger change event
+                            element.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                    break;
+            }
+        });
+    }
+
+    /**
+     * Reverts the actions for a rule
+     */
+    private revertRuleActions(rule: FormRule, fields: { [key: string]: HTMLElement }): void {
+        rule.actions.forEach(action => {
+            const targetField = fields[action.targetField];
+            if (!targetField) return;
+
+            const element = targetField as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+            const container = this.getFieldContainer(targetField);
+
+            switch (action.type) {
+                case 'enable':
+                    element.disabled = true;
+                    break;
+                case 'disable':
+                    element.disabled = false;
+                    break;
+                case 'show':
+                    if (container) container.style.display = 'none';
+                    break;
+                case 'hide':
+                    if (container) container.style.display = '';
+                    break;
+                // For setValue and calculate, we don't revert automatically
+            }
+        });
+    }
+
+    /**
+     * Calculates formula result
+     */
+    private calculateFormula(formula: string, fields: { [key: string]: HTMLElement }): number | null {
+        try {
+            // Replace field names with values
+            let expression = formula;
+
+            // Find all potential field names in the formula
+            const fieldRegex = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
+            const fieldMatches = formula.match(fieldRegex) || [];
+
+            // Replace field names with their values
+            fieldMatches.forEach(fieldName => {
+                if (fields[fieldName]) {
+                    const element = fields[fieldName] as HTMLInputElement | HTMLSelectElement;
+                    const value = element.type === 'checkbox' ?
+                        (element as HTMLInputElement).checked :
+                        element.value;
+                    // Use numeric value or 0 if empty/NaN
+                    const numValue = value === '' ? 0 : Number(value);
+                    if (!isNaN(numValue)) {
+                        expression = expression.replace(new RegExp('\\b' + fieldName + '\\b', 'g'), String(numValue));
+                    }
+                }
+            });
+
+            // Evaluate the expression
+            // eslint-disable-next-line no-new-func
+            const result = Function('"use strict"; return (' + expression + ')')();
+
+            // Format the result if needed
+            return typeof result === 'number' ? Math.round(result * 100) / 100 : null;
+        } catch (e) {
+            console.error('Error evaluating formula:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Gets the container element for a form field
+     */
+    private getFieldContainer(field: HTMLElement): HTMLElement | null {
+        let elem: HTMLElement | null = field;
+        while (elem && !elem.classList.contains('mb-3') && !elem.classList.contains('form-check') && elem !== document.body) {
+            elem = elem.parentElement;
+        }
+        return elem;
     }
 }

@@ -19,6 +19,7 @@ export interface Evidence {
     subitemDefinitions?: SubitemDefinition[];
     createdAt: Date;
     updatedAt: Date;
+    formRules?: FormRule[];
 }
 
 export interface SubitemDefinition {
@@ -57,4 +58,26 @@ export interface SubitemRecord {
     data: any;
     createdAt: Date;
     updatedAt: Date;
+}
+
+// Form rule system interfaces
+export interface FormRule {
+    id: string;
+    name: string;
+    conditions: RuleCondition[];
+    actions: RuleAction[];
+    active: boolean;
+}
+
+export interface RuleCondition {
+    fieldName: string;
+    operator: 'equals' | 'notEquals' | 'contains' | 'notContains' | 'greaterThan' | 'lessThan' | 'isEmpty' | 'isNotEmpty';
+    value?: string | number | boolean;
+}
+
+export interface RuleAction {
+    type: 'enable' | 'disable' | 'show' | 'hide' | 'setValue' | 'calculate';
+    targetField: string;
+    value?: string | number;
+    formula?: string;
 }

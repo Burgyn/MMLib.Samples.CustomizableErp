@@ -1,7 +1,7 @@
 import * as bootstrap from 'bootstrap';
 
 import { ActivatedRoute, Router } from '@angular/router';
-import { Category, Evidence, GridColumn, SubitemDefinition } from '../../models/evidence.model';
+import { Category, Evidence, FormRule, GridColumn, RuleAction, RuleCondition, SubitemDefinition } from '../../models/evidence.model';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { Editor, Component as GrapesComponent } from 'grapesjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -52,9 +52,13 @@ interface Iban { id: string; value: string; }
                                 (click)="showAiDialog()">
                             Try AI ✨
                         </button>
-                        <button class="btn btn-outline-secondary"
+                        <button class="btn btn-outline-secondary me-2"
                                 (click)="showSubitemDialog()">
                             <i class="bi bi-table"></i> Add Subitems
+                        </button>
+                        <button class="btn btn-outline-secondary"
+                                (click)="showFormRulesDialog()">
+                            <i class="bi bi-lightning"></i> Form Rules
                         </button>
                     </div>
                 </form>
@@ -73,7 +77,7 @@ interface Iban { id: string; value: string; }
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="aiPrompt" class="form-label">Describe the evidence you want to create:</label>
-                            <textarea class="form-control" id="aiPrompt" rows="5" [(ngModel)]="aiPrompt" placeholder="Example: Create an evidence for tracking mobile phones assigned to employees. Include fields for phone model, employee name, purchase date, assignment date, notes, purchase price, monthly plan cost, etc."></textarea>
+                            <textarea class="form-control" id="aiPrompt" rows="5" [(ngModel)]="aiPrompt" placeholder=""></textarea>
                         </div>
                         <div class="mb-3">
                             <label for="openaiApiKey" class="form-label">OpenAI API Key:</label>
@@ -277,6 +281,176 @@ interface Iban { id: string; value: string; }
                 </div>
             </div>
         </div>
+
+        <!-- Form Rules Dialog -->
+        <div class="modal fade" id="formRulesDialog" tabindex="-1" aria-labelledby="formRulesDialogLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-dialog-scrollable modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="formRulesDialogLabel">Form Rules</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <p class="text-muted">Configure form rules to add conditional logic and calculations to your form.</p>
+                        </div>
+
+                        <div *ngIf="formRules.length > 0" class="mb-4">
+                            <h6>Current Rules</h6>
+                            <div class="list-group">
+                                <div *ngFor="let rule of formRules; let i = index" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="d-flex align-items-center">
+                                            <div class="form-check form-switch me-2">
+                                                <input class="form-check-input" type="checkbox"
+                                                    [id]="'rule-toggle-' + i"
+                                                    [(ngModel)]="rule.active"
+                                                    (change)="updateRuleStatus(i, $event)">
+                                            </div>
+                                            <strong>{{ rule.name }}</strong>
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ summarizeRule(rule) }}
+                                        </small>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" (click)="editRule(i)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" (click)="deleteRule(i)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <button class="btn btn-outline-primary" (click)="startNewRule()">
+                                <i class="bi bi-plus-lg"></i> Add New Rule
+                            </button>
+                            <button class="btn btn-outline-secondary ms-2" (click)="createSampleTaxRule()">
+                                <i class="bi bi-plus-lg"></i> Add Sample Tax Rule
+                            </button>
+                        </div>
+
+                        <div *ngIf="showRuleForm" class="rule-form border rounded p-3 mt-4">
+                            <h6>{{ editingExistingRule ? 'Edit' : 'New' }} Rule</h6>
+
+                            <div class="mb-3">
+                                <label for="ruleName" class="form-label">Rule Name</label>
+                                <input type="text" class="form-control" id="ruleName" [(ngModel)]="currentRule.name" placeholder="e.g., Show Tax Fields">
+                            </div>
+
+                            <h6 class="mt-4">Conditions (If)</h6>
+                            <p class="small text-muted">All conditions must be true for the rule to trigger.</p>
+
+                            <div *ngIf="currentRule.conditions.length === 0" class="alert alert-light">
+                                No conditions defined yet. Add a condition below.
+                            </div>
+
+                            <div *ngFor="let condition of currentRule.conditions; let i = index" class="mb-2 p-2 border rounded">
+                                <div class="row align-items-center g-2">
+                                    <div class="col">
+                                        <select class="form-select form-select-sm" [(ngModel)]="condition.fieldName">
+                                            <option value="">Select Field</option>
+                                            <option *ngFor="let field of availableFields" [value]="field.field">
+                                                {{ field.displayName || field.field }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="col">
+                                        <select class="form-select form-select-sm" [(ngModel)]="condition.operator">
+                                            <option value="equals">Equals</option>
+                                            <option value="notEquals">Not Equals</option>
+                                            <option value="contains">Contains</option>
+                                            <option value="notContains">Not Contains</option>
+                                            <option value="greaterThan">Greater Than</option>
+                                            <option value="lessThan">Less Than</option>
+                                            <option value="isEmpty">Is Empty</option>
+                                            <option value="isNotEmpty">Is Not Empty</option>
+                                        </select>
+                                    </div>
+                                    <div class="col" *ngIf="!['isEmpty', 'isNotEmpty'].includes(condition.operator)">
+                                        <input type="text" class="form-control form-control-sm" [(ngModel)]="condition.value" placeholder="Value">
+                                    </div>
+                                    <div class="col-auto">
+                                        <button class="btn btn-sm btn-outline-danger" (click)="removeCondition(i)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 mt-2">
+                                <button class="btn btn-sm btn-outline-primary" (click)="addCondition()">
+                                    <i class="bi bi-plus-lg"></i> Add Condition
+                                </button>
+                            </div>
+
+                            <h6 class="mt-4">Actions (Then)</h6>
+
+                            <div *ngIf="currentRule.actions.length === 0" class="alert alert-light">
+                                No actions defined yet. Add an action below.
+                            </div>
+
+                            <div *ngFor="let action of currentRule.actions; let i = index" class="mb-2 p-2 border rounded">
+                                <div class="row align-items-center g-2">
+                                    <div class="col">
+                                        <select class="form-select form-select-sm" [(ngModel)]="action.type">
+                                            <option value="enable">Enable</option>
+                                            <option value="disable">Disable</option>
+                                            <option value="show">Show</option>
+                                            <option value="hide">Hide</option>
+                                            <option value="setValue">Set Value</option>
+                                            <option value="calculate">Calculate</option>
+                                        </select>
+                                    </div>
+                                    <div class="col">
+                                        <select class="form-select form-select-sm" [(ngModel)]="action.targetField">
+                                            <option value="">Select Field</option>
+                                            <option *ngFor="let field of availableFields" [value]="field.field">
+                                                {{ field.displayName || field.field }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="col" *ngIf="action.type === 'setValue'">
+                                        <input type="text" class="form-control form-control-sm" [(ngModel)]="action.value" placeholder="Value">
+                                    </div>
+                                    <div class="col" *ngIf="action.type === 'calculate'">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" [(ngModel)]="action.formula" placeholder="e.g. price * 0.2">
+                                            <button class="btn btn-outline-secondary" type="button" (click)="editFormula(i)">
+                                                <i class="bi bi-calculator"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button class="btn btn-sm btn-outline-danger" (click)="removeAction(i)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 mt-2">
+                                <button class="btn btn-sm btn-outline-primary" (click)="addAction()">
+                                    <i class="bi bi-plus-lg"></i> Add Action
+                                </button>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-3">
+                                <button class="btn btn-secondary me-2" (click)="cancelRuleEdit()">Cancel</button>
+                                <button class="btn btn-primary" [disabled]="!isValidRule()" (click)="saveRule()">Save Rule</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     `,
     styles: [`
         .editor-container {
@@ -369,6 +543,21 @@ export class EvidenceEditorComponent implements OnInit, OnDestroy {
     currentFormulaColumnIndex: number = -1;
     availableOperators: string[] = ['+', '-', '*', '/', '(', ')', '&&', '||', '>', '<', '>=', '<=', '==', '!='];
     formulaExpression: string = '';
+
+    // Form rules properties
+    formRules: FormRule[] = [];
+    private formRulesDialog: any; // Will hold the Bootstrap modal reference for rules editor
+    showRuleForm: boolean = false;
+    editingExistingRule: boolean = false;
+    currentRuleIndex: number = -1;
+    currentRule: FormRule = {
+        id: '',
+        name: '',
+        conditions: [],
+        actions: [],
+        active: true
+    };
+    availableFields: { field: string, displayName: string, type: string }[] = [];
 
     constructor(
         private fb: FormBuilder,
@@ -945,6 +1134,15 @@ body {
 
         // --- Message Listener for Data Fetching (add this in the component class) ---
         this.setupiframeMessageListener();
+
+        // Add event handler for editor changes
+        this.editor.on('component:update', () => {
+            // Update available fields when components change
+            this.updateAvailableFields();
+
+            // Apply rules to the editor preview
+            this.applyRulesToEditorPreview();
+        });
     }
 
     // --- Add this method to handle messages from iframe ---
@@ -982,8 +1180,19 @@ body {
                 // Load subitem definitions if any
                 this.subitemDefinitions = evidence.subitemDefinitions || [];
 
+                // Load form rules if any
+                this.formRules = evidence.formRules || [];
+
                 // Load form definition into the editor
                 this.editor?.loadProjectData(JSON.parse(evidence.formDefinition));
+
+                // Update available fields after loading the editor content
+                this.updateAvailableFields();
+
+                // Apply rules to the editor preview
+                setTimeout(() => {
+                    this.applyRulesToEditorPreview();
+                }, 500); // Small delay to ensure the editor has rendered
             }
         });
     }
@@ -1004,6 +1213,7 @@ body {
             formDefinition: JSON.stringify(this.editor.getProjectData()),
             gridColumns,
             subitemDefinitions: this.subitemDefinitions,
+            formRules: this.formRules, // Add form rules
             updatedAt: new Date()
         };
 
@@ -1881,27 +2091,31 @@ body {
      * Saves the formula for the current column
      */
     saveFormula(): void {
-        if (this.currentFormulaColumnIndex < 0) return;
+        if (this.currentFormulaColumnIndex >= 0) {
+            // Original behavior for column formulas
+            const column = this.currentSubitem.columns[this.currentFormulaColumnIndex];
+            column.formula = this.formulaExpression.trim();
 
-        const column = this.currentSubitem.columns[this.currentFormulaColumnIndex];
-        column.formula = this.formulaExpression.trim();
+            // Extract field names from the formula
+            column.formulaFields = this.extractFieldsFromFormula(column.formula);
 
-        // Extract field names from the formula
-        column.formulaFields = this.extractFieldsFromFormula(column.formula);
+            // Close the dialog
+            if (this.formulaDialog) {
+                this.formulaDialog.hide();
+            }
+            return;
+        }
+
+        // For rule actions
+        const ruleActions = this.currentRule.actions;
+        for (let i = 0; i < ruleActions.length; i++) {
+            const action = ruleActions[i];
+            if (action.type === 'calculate') {
+                action.formula = this.formulaExpression.trim();
+            }
+        }
 
         // Close the dialog
-        if (this.formulaDialog) {
-            this.formulaDialog.hide();
-        }
-    }
-
-    /**
-     * Cancels the formula editing
-     */
-    cancelFormula(): void {
-        this.currentFormulaColumnIndex = -1;
-        this.formulaExpression = '';
-
         if (this.formulaDialog) {
             this.formulaDialog.hide();
         }
@@ -1946,5 +2160,614 @@ body {
      */
     getAvailableFieldsForFormula(): GridColumn[] {
         return this.currentSubitem.columns.filter(col => col.field && col.headerName);
+    }
+
+    // Form Rules Methods
+
+    // Show form rules dialog
+    showFormRulesDialog(): void {
+        // Update available fields from the editor
+        this.updateAvailableFields();
+
+        // Initialize the Bootstrap modal if not already done
+        if (!this.formRulesDialog) {
+            const dialogElement = document.getElementById('formRulesDialog');
+            if (dialogElement) {
+                this.formRulesDialog = new bootstrap.Modal(dialogElement);
+            }
+        }
+
+        // Show the dialog
+        if (this.formRulesDialog) {
+            this.formRulesDialog.show();
+        }
+    }
+
+    // Update available fields for rules based on the current editor content
+    private updateAvailableFields(): void {
+        this.availableFields = [];
+
+        if (!this.editor) return;
+
+        const wrapper = this.editor.DomComponents.getWrapper();
+        if (!wrapper) return;
+
+        // Find components with a defined 'name' trait that has a value
+        const components = wrapper.find('[data-gjs-type]');
+
+        components.forEach((component: GrapesComponent) => {
+            const nameTrait = component.getTrait('name');
+            const name = nameTrait?.get('value');
+
+            // Only add fields if name trait exists and has a non-empty value
+            if (name) {
+                const displayNameTrait = component.getTrait('displayName');
+                const displayName = displayNameTrait?.get('value');
+                const componentTypeAttr = component.getAttributes()['data-gjs-type'] || component.get('type') || 'string';
+
+                // Determine the type for this field
+                let fieldType = this.getFieldType(componentTypeAttr);
+
+                this.availableFields.push({
+                    field: name,
+                    displayName: displayName || name,
+                    type: fieldType
+                });
+            }
+        });
+
+        // Remove duplicates
+        this.availableFields = Array.from(
+            new Map(this.availableFields.map(item => [item.field, item])).values()
+        );
+    }
+
+    private getFieldType(componentType: string): string {
+        switch (componentType) {
+            case 'number-input':
+                return 'number';
+            case 'date-input':
+                return 'date';
+            case 'checkbox-input':
+                return 'boolean';
+            case 'select':
+            case 'partner-select':
+                return 'select';
+            default:
+                return 'string';
+        }
+    }
+
+    // Start creating a new rule
+    startNewRule(): void {
+        this.editingExistingRule = false;
+        this.currentRuleIndex = -1;
+        this.currentRule = {
+            id: crypto.randomUUID(),
+            name: '',
+            conditions: [],
+            actions: [],
+            active: true
+        };
+        this.showRuleForm = true;
+    }
+
+    // Edit an existing rule
+    editRule(index: number): void {
+        if (index >= 0 && index < this.formRules.length) {
+            this.editingExistingRule = true;
+            this.currentRuleIndex = index;
+            // Clone the rule to avoid direct modification
+            this.currentRule = JSON.parse(JSON.stringify(this.formRules[index]));
+            this.showRuleForm = true;
+        }
+    }
+
+    // Delete a rule
+    deleteRule(index: number): void {
+        if (confirm('Are you sure you want to delete this rule?')) {
+            if (index >= 0 && index < this.formRules.length) {
+                this.formRules.splice(index, 1);
+            }
+        }
+    }
+
+    // Update rule active status
+    updateRuleStatus(index: number, event: Event): void {
+        if (index >= 0 && index < this.formRules.length) {
+            const checked = (event.target as HTMLInputElement).checked;
+            this.formRules[index].active = checked;
+        }
+    }
+
+    // Add a condition to the current rule
+    addCondition(): void {
+        this.currentRule.conditions.push({
+            fieldName: '',
+            operator: 'equals'
+        });
+    }
+
+    // Remove a condition from the current rule
+    removeCondition(index: number): void {
+        if (index >= 0 && index < this.currentRule.conditions.length) {
+            this.currentRule.conditions.splice(index, 1);
+        }
+    }
+
+    // Add an action to the current rule
+    addAction(): void {
+        this.currentRule.actions.push({
+            type: 'enable',
+            targetField: ''
+        });
+    }
+
+    // Remove an action from the current rule
+    removeAction(index: number): void {
+        if (index >= 0 && index < this.currentRule.actions.length) {
+            this.currentRule.actions.splice(index, 1);
+        }
+    }
+
+    // Edit formula for a calculation action
+    editFormula(actionIndex: number): void {
+        if (actionIndex < 0 || actionIndex >= this.currentRule.actions.length) return;
+
+        const action = this.currentRule.actions[actionIndex];
+        if (action.type !== 'calculate') return;
+
+        this.formulaExpression = action.formula || '';
+        this.currentFormulaColumnIndex = -1; // Not editing a column formula
+
+        // Initialize modal if not already done
+        if (!this.formulaDialog) {
+            const dialogElement = document.getElementById('formulaDialog');
+            if (dialogElement) {
+                this.formulaDialog = new bootstrap.Modal(dialogElement);
+            }
+        }
+
+        // Show formula dialog
+        if (this.formulaDialog) {
+            this.formulaDialog.show();
+        }
+    }
+
+    // Validate the current rule
+    isValidRule(): boolean {
+        // Rule must have a name
+        if (!this.currentRule.name) return false;
+
+        // Must have at least one condition (unless it's a calculation)
+        const isCalculationRule = this.currentRule.actions.some(a => a.type === 'calculate');
+        if (this.currentRule.conditions.length === 0 && !isCalculationRule) return false;
+
+        // All conditions must be valid
+        const validConditions = this.currentRule.conditions.every(c =>
+            c.fieldName && c.operator &&
+            ((['isEmpty', 'isNotEmpty'].includes(c.operator)) || c.value !== undefined)
+        );
+
+        // Must have at least one action
+        if (this.currentRule.actions.length === 0) return false;
+
+        // All actions must be valid
+        const validActions = this.currentRule.actions.every(a =>
+            a.type && a.targetField &&
+            (a.type !== 'setValue' || a.value !== undefined) &&
+            (a.type !== 'calculate' || a.formula)
+        );
+
+        return validConditions && validActions;
+    }
+
+    // Save the current rule
+    saveRule(): void {
+        if (!this.isValidRule()) return;
+
+        if (this.editingExistingRule && this.currentRuleIndex >= 0) {
+            // Update existing rule
+            this.formRules[this.currentRuleIndex] = { ...this.currentRule };
+        } else {
+            // Add new rule
+            this.formRules.push({ ...this.currentRule });
+        }
+
+        // Reset form
+        this.cancelRuleEdit();
+
+        // Update the rules in the editor preview
+        this.applyRulesToEditorPreview();
+    }
+
+    // Cancel editing rule
+    cancelRuleEdit(): void {
+        this.showRuleForm = false;
+        this.editingExistingRule = false;
+        this.currentRuleIndex = -1;
+        this.currentRule = {
+            id: '',
+            name: '',
+            conditions: [],
+            actions: [],
+            active: true
+        };
+    }
+
+    // Create a human-readable summary of a rule
+    summarizeRule(rule: FormRule): string {
+        let summary = '';
+
+        if (rule.conditions.length > 0) {
+            const conditionTexts = rule.conditions.map(c => {
+                const fieldName = this.getFieldDisplayName(c.fieldName);
+
+                // Handle different operator types
+                if (c.operator === 'isEmpty') {
+                    return `${fieldName} is empty`;
+                } else if (c.operator === 'isNotEmpty') {
+                    return `${fieldName} is not empty`;
+                } else {
+                    // Format operator for display
+                    const operatorMap: {[key: string]: string} = {
+                        'equals': '=',
+                        'notEquals': '≠',
+                        'contains': 'contains',
+                        'notContains': 'does not contain',
+                        'greaterThan': '>',
+                        'lessThan': '<'
+                    };
+
+                    return `${fieldName} ${operatorMap[c.operator] || c.operator} ${c.value}`;
+                }
+            });
+
+            summary += `If ${conditionTexts.join(' AND ')}`;
+        }
+
+        if (rule.actions.length > 0) {
+            const actionTexts = rule.actions.map(a => {
+                const fieldName = this.getFieldDisplayName(a.targetField);
+
+                switch (a.type) {
+                    case 'enable': return `enable ${fieldName}`;
+                    case 'disable': return `disable ${fieldName}`;
+                    case 'show': return `show ${fieldName}`;
+                    case 'hide': return `hide ${fieldName}`;
+                    case 'setValue': return `set ${fieldName} to "${a.value}"`;
+                    case 'calculate': return `calculate ${fieldName} using formula`;
+                    default: return `${a.type} ${fieldName}`;
+                }
+            });
+
+            summary += ` then ${actionTexts.join(', ')}`;
+        }
+
+        return summary;
+    }
+
+    // Get a field's display name from its field name
+    private getFieldDisplayName(fieldName: string): string {
+        const field = this.availableFields.find(f => f.field === fieldName);
+        return field ? field.displayName : fieldName;
+    }
+
+    // Apply form rules in the editor preview
+    private applyRulesToEditorPreview(): void {
+        if (!this.editor) return;
+
+        // Get iframe document from editor
+        const frame = this.editor.Canvas.getFrameEl();
+        if (!frame || !frame.contentDocument) return;
+
+        const doc = frame.contentDocument;
+
+        // Inject or update the rules script
+        this.injectRulesScript(doc);
+    }
+
+    // Inject JavaScript to handle rules in the editor preview
+    private injectRulesScript(doc: Document): void {
+        // Remove existing rules script if any
+        const existingScript = doc.getElementById('gjs-form-rules-script');
+        if (existingScript) {
+            existingScript.remove();
+        }
+
+        // Skip if there are no active rules
+        if (!this.formRules.some(rule => rule.active)) return;
+
+        // Create a new script element
+        const script = doc.createElement('script');
+        script.id = 'gjs-form-rules-script';
+
+        // Generate the rules script content
+        script.textContent = this.generateRulesScript();
+
+        // Append the script to the document
+        doc.body.appendChild(script);
+    }
+
+    // Generate JavaScript code for form rules
+    private generateRulesScript(): string {
+        // Only include active rules
+        const activeRules = this.formRules.filter(rule => rule.active);
+
+        return `
+        (function() {
+            // Form rules
+            const rules = ${JSON.stringify(activeRules)};
+
+            // Field references cache
+            const fields = {};
+
+            // Initialize rules engine
+            function initRules() {
+                // Find all form fields
+                const inputs = document.querySelectorAll('input, select, textarea');
+
+                // Cache field references by name
+                inputs.forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (name) {
+                        fields[name] = input;
+
+                        // Add event listeners for change events
+                        input.addEventListener('change', evaluateRules);
+                        input.addEventListener('input', evaluateRules);
+                    }
+                });
+
+                // Initial evaluation
+                evaluateRules();
+            }
+
+            // Evaluate all rules
+            function evaluateRules() {
+                rules.forEach(evaluateRule);
+            }
+
+            // Evaluate a single rule
+            function evaluateRule(rule) {
+                // Skip if no conditions (except for calculation rules)
+                if (rule.conditions.length === 0 && !rule.actions.some(a => a.type === 'calculate')) {
+                    return;
+                }
+
+                // For calculation rules with no conditions, always apply
+                if (rule.conditions.length === 0 && rule.actions.some(a => a.type === 'calculate')) {
+                    applyRuleActions(rule);
+                    return;
+                }
+
+                // Check if all conditions are met
+                const conditionsMet = rule.conditions.every(evaluateCondition);
+
+                // Apply actions if conditions are met
+                if (conditionsMet) {
+                    applyRuleActions(rule);
+                } else {
+                    // Revert actions for disable/enable, show/hide
+                    revertRuleActions(rule);
+                }
+            }
+
+            // Evaluate a single condition
+            function evaluateCondition(condition) {
+                const field = fields[condition.fieldName];
+                if (!field) return false;
+
+                let fieldValue = field.type === 'checkbox' ? field.checked : field.value;
+                let testValue = condition.value;
+
+                // Type conversion for numeric comparisons
+                if (condition.operator === 'greaterThan' || condition.operator === 'lessThan') {
+                    fieldValue = Number(fieldValue);
+                    testValue = Number(testValue);
+
+                    if (isNaN(fieldValue) || isNaN(testValue)) {
+                        return false;
+                    }
+                }
+
+                switch (condition.operator) {
+                    case 'equals':
+                        return fieldValue == testValue;
+                    case 'notEquals':
+                        return fieldValue != testValue;
+                    case 'contains':
+                        return String(fieldValue).includes(String(testValue));
+                    case 'notContains':
+                        return !String(fieldValue).includes(String(testValue));
+                    case 'greaterThan':
+                        return fieldValue > testValue;
+                    case 'lessThan':
+                        return fieldValue < testValue;
+                    case 'isEmpty':
+                        return !fieldValue;
+                    case 'isNotEmpty':
+                        return !!fieldValue;
+                    default:
+                        return false;
+                }
+            }
+
+            // Apply the actions for a rule
+            function applyRuleActions(rule) {
+                rule.actions.forEach(action => {
+                    const targetField = fields[action.targetField];
+                    if (!targetField) return;
+
+                    // Get the container (form-group) for show/hide
+                    const container = getFieldContainer(targetField);
+
+                    switch (action.type) {
+                        case 'enable':
+                            targetField.disabled = false;
+                            break;
+                        case 'disable':
+                            targetField.disabled = true;
+                            break;
+                        case 'show':
+                            if (container) container.style.display = '';
+                            break;
+                        case 'hide':
+                            if (container) container.style.display = 'none';
+                            break;
+                        case 'setValue':
+                            if (targetField.type === 'checkbox') {
+                                targetField.checked = action.value === true || action.value === 'true';
+                            } else {
+                                targetField.value = action.value;
+                            }
+                            // Trigger change event
+                            targetField.dispatchEvent(new Event('change', { bubbles: true }));
+                            break;
+                        case 'calculate':
+                            if (action.formula) {
+                                const result = calculateFormula(action.formula);
+                                if (result !== null) {
+                                    targetField.value = result;
+                                    // Trigger change event
+                                    targetField.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            }
+                            break;
+                    }
+                });
+            }
+
+            // Revert the actions for a rule
+            function revertRuleActions(rule) {
+                rule.actions.forEach(action => {
+                    const targetField = fields[action.targetField];
+                    if (!targetField) return;
+
+                    // Get the container (form-group) for show/hide
+                    const container = getFieldContainer(targetField);
+
+                    switch (action.type) {
+                        case 'enable':
+                            targetField.disabled = true;
+                            break;
+                        case 'disable':
+                            targetField.disabled = false;
+                            break;
+                        case 'show':
+                            if (container) container.style.display = 'none';
+                            break;
+                        case 'hide':
+                            if (container) container.style.display = '';
+                            break;
+                        // For setValue and calculate, we don't revert automatically
+                    }
+                });
+            }
+
+            // Calculate formula result
+            function calculateFormula(formula) {
+                try {
+                    // Replace field names with values
+                    let expression = formula;
+
+                    // Find all potential field names in the formula
+                    const fieldRegex = /\\b([a-zA-Z_][a-zA-Z0-9_]*)\\b/g;
+                    const fieldMatches = formula.match(fieldRegex) || [];
+
+                    // Replace field names with their values
+                    fieldMatches.forEach(fieldName => {
+                        if (fields[fieldName]) {
+                            const field = fields[fieldName];
+                            const value = field.type === 'checkbox' ? field.checked : field.value;
+                            // Use numeric value or 0 if empty/NaN
+                            const numValue = value === '' ? 0 : Number(value);
+                            if (!isNaN(numValue)) {
+                                expression = expression.replace(new RegExp('\\b' + fieldName + '\\b', 'g'), numValue);
+                            }
+                        }
+                    });
+
+                    // Evaluate the expression
+                    // eslint-disable-next-line no-new-func
+                    const result = Function('"use strict"; return (' + expression + ')')();
+
+                    // Format the result if needed
+                    return typeof result === 'number' ? Math.round(result * 100) / 100 : result;
+                } catch (e) {
+                    console.error('Error evaluating formula:', e);
+                    return null;
+                }
+            }
+
+            // Find the form-group container for a field
+            function getFieldContainer(field) {
+                let elem = field;
+                while (elem && !elem.classList.contains('mb-3') && !elem.classList.contains('form-check') && elem !== document.body) {
+                    elem = elem.parentElement;
+                }
+                return elem;
+            }
+
+            // Initialize on load
+            initRules();
+
+            // Re-evaluate when DOM changes (for dynamically added fields)
+            const observer = new MutationObserver(initRules);
+            observer.observe(document.body, { childList: true, subtree: true });
+        })();
+        `;
+    }
+
+    // Fix the cancelFormula method to remove super call
+    cancelFormula(): void {
+        if (this.currentFormulaColumnIndex >= 0) {
+            // Original behavior for column formulas
+            this.currentFormulaColumnIndex = -1;
+            this.formulaExpression = '';
+
+            // Close the dialog
+            if (this.formulaDialog) {
+                this.formulaDialog.hide();
+            }
+            return;
+        }
+
+        // Close the dialog
+        if (this.formulaDialog) {
+            this.formulaDialog.hide();
+        }
+    }
+
+    // Add a method to create a sample tax calculation rule
+    createSampleTaxRule(): void {
+        // Create rule for tax calculation (price * 0.2)
+        const taxRule: FormRule = {
+            id: crypto.randomUUID(),
+            name: 'Calculate Tax (20%)',
+            conditions: [],
+            actions: [
+                {
+                    type: 'calculate',
+                    targetField: 'tax',
+                    formula: 'price * 0.2'
+                },
+                {
+                    type: 'calculate',
+                    targetField: 'total',
+                    formula: 'price + tax'
+                }
+            ],
+            active: true
+        };
+
+        // Add rule to the list
+        this.formRules.push(taxRule);
+
+        // Show notification to the user
+        alert('Sample tax calculation rule added! Add number fields named "price", "tax", and "total" to see it work.');
+
+        // Apply rules to editor preview
+        this.applyRulesToEditorPreview();
     }
 }
