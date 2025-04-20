@@ -272,8 +272,8 @@ export class SubitemEditorDialogComponent implements OnInit {
         const column = this.data.subitemDefinition.columns.find(col => col.field === fieldName);
         if (!column || !column.isCalculated || !column.formula) return;
 
-        // Get current form values
-        const currentValues = this.recordForm.value;
+        // Get current form values and ensure we have the latest values
+        const currentValues = { ...this.recordForm.getRawValue() };
 
         // Use the formula evaluation service
         try {

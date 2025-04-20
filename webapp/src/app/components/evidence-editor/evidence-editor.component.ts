@@ -54,7 +54,7 @@ interface Iban { id: string; value: string; }
                         </button>
                         <button class="btn btn-outline-secondary me-2"
                                 (click)="showSubitemDialog()">
-                            <i class="bi bi-table"></i> Pridať podpoložky
+                            <i class="bi bi-table"></i> Podzáznamy
                         </button>
                         <button class="btn btn-outline-secondary"
                                 (click)="showFormRulesDialog()">
