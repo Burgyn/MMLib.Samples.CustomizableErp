@@ -1024,14 +1024,22 @@ export class RecordEditorDialogComponent implements OnInit {
         this.debugInfo += '\n=== End updating reference details ===\n';
     }
 
-    private formatReferenceDisplay(pattern: string, data: any): string {
+    private formatReferenceDisplay(pattern: string, record: any): string {
         this.debugInfo += `\nFormatting reference display:`;
         this.debugInfo += `\n- Pattern: ${pattern}`;
-        this.debugInfo += `\n- Data: ${JSON.stringify(data)}`;
+        this.debugInfo += `\n- Record: ${JSON.stringify(record)}`;
 
         const result = pattern.replace(/\{([^}]+)\}/g, (match, field) => {
-            const value = data[field] || '';
-            this.debugInfo += `\n- Replacing ${match} with ${value}`;
+            // First check if it's a root level property
+            if (field === 'documentNumber') {
+                const value = record.documentNumber || '';
+                this.debugInfo += `\n- Replacing ${match} with root property ${value}`;
+                return value;
+            }
+
+            // Then check in the data object
+            const value = record.data?.[field] || '';
+            this.debugInfo += `\n- Replacing ${match} with data property ${value}`;
             return value;
         });
 
@@ -1382,7 +1390,7 @@ export class RecordEditorDialogComponent implements OnInit {
                         const selectedReference = this.referenceDataMap[element.name].find(r => r.id === selectedId);
                         if (selectedReference) {
                             const displayPattern = element.getAttribute('data-display-pattern') || '';
-                            const display = this.formatReferenceDisplay(displayPattern, selectedReference.data);
+                            const display = this.formatReferenceDisplay(displayPattern, selectedReference);
 
                             formValues[element.name] = {
                                 id: selectedId,
@@ -1840,7 +1848,7 @@ export class RecordEditorDialogComponent implements OnInit {
                         records.forEach(record => {
                             const option = document.createElement('option');
                             option.value = record.id;
-                            const displayText = this.formatReferenceDisplay(displayPattern, record.data);
+                            const displayText = this.formatReferenceDisplay(displayPattern, record);
                             option.textContent = displayText;
                             this.debugInfo += `\nAdding option: ${displayText} (${record.id})`;
                             select.appendChild(option);
