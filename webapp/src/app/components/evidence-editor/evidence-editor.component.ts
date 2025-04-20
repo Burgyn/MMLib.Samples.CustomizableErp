@@ -30,12 +30,12 @@ interface Iban { id: string; value: string; }
                         <input type="text"
                                class="form-control"
                                formControlName="name"
-                               placeholder="Evidence Name">
+                               placeholder="Názov evidence">
                     </div>
                     <div class="col-md-6">
                         <select class="form-select"
                                 formControlName="categoryId">
-                            <option value="">Select Category</option>
+                            <option value="">Vyberte kategóriu</option>
                             <option *ngFor="let category of categories"
                                     [value]="category.id">
                                 {{ category.name }}
@@ -46,19 +46,19 @@ interface Iban { id: string; value: string; }
                         <button class="btn btn-primary me-2"
                                 (click)="saveEvidence()"
                                 [disabled]="!evidenceForm.valid">
-                            <i class="bi bi-save"></i> Save
+                            <i class="bi bi-save"></i> Uložiť
                         </button>
                         <button class="btn btn-outline-secondary me-2"
                                 (click)="showAiDialog()">
-                            Try AI ✨
+                            Skúsiť AI ✨
                         </button>
                         <button class="btn btn-outline-secondary me-2"
                                 (click)="showSubitemDialog()">
-                            <i class="bi bi-table"></i> Add Subitems
+                            <i class="bi bi-table"></i> Pridať podpoložky
                         </button>
                         <button class="btn btn-outline-secondary"
                                 (click)="showFormRulesDialog()">
-                            <i class="bi bi-lightning"></i> Form Rules
+                            <i class="bi bi-lightning"></i> Automatizácia
                         </button>
                     </div>
                 </form>
@@ -71,32 +71,32 @@ interface Iban { id: string; value: string; }
             <div class="modal-dialog modal-lg">
                 <div class="modal-dialog-scrollable modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="aiDialogLabel">Create Evidence with AI</h5>
+                        <h5 class="modal-title" id="aiDialogLabel">Vytvoriť evidenciu pomocou AI</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="aiPrompt" class="form-label">Describe the evidence you want to create:</label>
+                            <label for="aiPrompt" class="form-label">Popíšte evidenciu, ktorú chcete vytvoriť:</label>
                             <textarea class="form-control" id="aiPrompt" rows="5" [(ngModel)]="aiPrompt" placeholder=""></textarea>
                         </div>
                         <div class="mb-3">
-                            <label for="openaiApiKey" class="form-label">OpenAI API Key:</label>
+                            <label for="openaiApiKey" class="form-label">OpenAI API kľúč:</label>
                             <input type="password" class="form-control" id="openaiApiKey" [(ngModel)]="openaiApiKey" placeholder="sk-...">
-                            <div class="form-text">Your API key is stored in your browser's local storage.</div>
+                            <div class="form-text">Váš API kľúč je uložený v lokálnom úložisku vášho prehliadača.</div>
                         </div>
                         <div *ngIf="isGenerating" class="d-flex justify-content-center">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
-                            <span class="ms-2">Generating evidence design...</span>
+                            <span class="ms-2">Generovanie návrhu evidence...</span>
                         </div>
                         <div *ngIf="aiError" class="alert alert-danger">
                             {{ aiError }}
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" [disabled]="!aiPrompt || !openaiApiKey || isGenerating" (click)="generateEvidenceWithAI()">Generate</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zavrieť</button>
+                        <button type="button" class="btn btn-primary" [disabled]="!aiPrompt || !openaiApiKey || isGenerating" (click)="generateEvidenceWithAI()">Generovať</button>
                     </div>
                 </div>
             </div>
@@ -107,22 +107,22 @@ interface Iban { id: string; value: string; }
             <div class="modal-dialog modal-lg">
                 <div class="modal-dialog-scrollable modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="subitemDialogLabel">Define Subitems</h5>
+                        <h5 class="modal-title" id="subitemDialogLabel">Definícia podpoložiek</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-4">
-                            <p class="text-muted">Configure subitem definitions for nested records. For example, define items for an invoice.</p>
+                            <p class="text-muted">Nakonfigurujte definície podpoložiek pre vnorené záznamy. Napríklad definujte položky pre faktúru.</p>
                         </div>
 
                         <div *ngIf="subitemDefinitions.length > 0" class="mb-4">
-                            <h6>Current Subitem Definitions</h6>
+                            <h6>Aktuálne definície podpoložiek</h6>
                             <div class="list-group">
                                 <div *ngFor="let def of subitemDefinitions; let i = index" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                                     <div>
                                         <strong>{{ def.name }}</strong>
                                         <small class="text-muted ms-2">({{ def.fieldName }})</small>
-                                        <div class="small text-muted">{{ def.columns.length }} columns</div>
+                                        <div class="small text-muted">{{ def.columns.length }} stĺpcov</div>
                                     </div>
                                     <div class="btn-group">
                                         <button class="btn btn-sm btn-outline-primary" (click)="editSubitemDefinition(i)">
@@ -138,55 +138,55 @@ interface Iban { id: string; value: string; }
 
                         <div class="mb-3">
                             <button class="btn btn-outline-primary" (click)="startNewSubitemDefinition()">
-                                <i class="bi bi-plus-lg"></i> Add New Subitem Definition
+                                <i class="bi bi-plus-lg"></i> Pridať novú definíciu podpoložky
                             </button>
                         </div>
 
                         <div *ngIf="showSubitemForm" class="subitem-form border rounded p-3 mt-3">
-                            <h6>{{ editingExistingSubitem ? 'Edit' : 'New' }} Subitem Definition</h6>
+                            <h6>{{ editingExistingSubitem ? 'Upraviť' : 'Nová' }} definícia podpoložky</h6>
 
                             <div class="mb-3">
-                                <label for="subitemName" class="form-label">Display Name</label>
-                                <input type="text" class="form-control" id="subitemName" [(ngModel)]="currentSubitem.name" placeholder="e.g., Invoice Items">
+                                <label for="subitemName" class="form-label">Zobrazovaný názov</label>
+                                <input type="text" class="form-control" id="subitemName" [(ngModel)]="currentSubitem.name" placeholder="napr. Fakturačné položky">
                             </div>
 
                             <div class="mb-3">
-                                <label for="subitemField" class="form-label">Field Name</label>
-                                <input type="text" class="form-control" id="subitemField" [(ngModel)]="currentSubitem.fieldName" placeholder="e.g., invoiceItems">
-                                <div class="form-text">Used as the property name in the JSON data structure.</div>
+                                <label for="subitemField" class="form-label">Názov poľa</label>
+                                <input type="text" class="form-control" id="subitemField" [(ngModel)]="currentSubitem.fieldName" placeholder="napr. fakturačnéPoložky">
+                                <div class="form-text">Používa sa ako názov vlastnosti v JSON dátovej štruktúre.</div>
                             </div>
 
-                            <h6 class="mt-4">Columns</h6>
+                            <h6 class="mt-4">Stĺpce</h6>
                             <div class="table-responsive">
                                 <table class="table table-sm">
                                     <thead>
                                         <tr>
-                                            <th>Field Name</th>
-                                            <th>Header Name</th>
-                                            <th>Type</th>
-                                            <th>Width</th>
-                                            <th>Calculated</th>
+                                            <th>Názov poľa</th>
+                                            <th>Názov hlavičky</th>
+                                            <th>Typ</th>
+                                            <th>Šírka</th>
+                                            <th>Vypočítané</th>
                                             <th></th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr *ngFor="let column of currentSubitem.columns; let i = index">
                                             <td>
-                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="column.field" placeholder="field">
+                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="column.field" placeholder="pole">
                                             </td>
                                             <td>
-                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="column.headerName" placeholder="Header">
+                                                <input type="text" class="form-control form-control-sm" [(ngModel)]="column.headerName" placeholder="Hlavička">
                                             </td>
                                             <td>
                                                 <select class="form-select form-select-sm" [(ngModel)]="column.type">
                                                     <option value="string">Text</option>
-                                                    <option value="number">Number</option>
-                                                    <option value="date">Date</option>
+                                                    <option value="number">Číslo</option>
+                                                    <option value="date">Dátum</option>
                                                     <option value="boolean">Boolean</option>
                                                 </select>
                                             </td>
                                             <td>
-                                                <input type="number" class="form-control form-control-sm" [(ngModel)]="column.width" placeholder="Width">
+                                                <input type="number" class="form-control form-control-sm" [(ngModel)]="column.width" placeholder="Šírka">
                                             </td>
                                             <td>
                                                 <div class="form-check">
@@ -203,7 +203,7 @@ interface Iban { id: string; value: string; }
                                             </td>
                                         </tr>
                                         <tr *ngIf="currentSubitem.columns.length === 0">
-                                            <td colspan="6" class="text-center text-muted">No columns defined</td>
+                                            <td colspan="6" class="text-center text-muted">Nie sú definované žiadne stĺpce</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -211,18 +211,18 @@ interface Iban { id: string; value: string; }
 
                             <div class="mb-3">
                                 <button class="btn btn-sm btn-outline-primary" (click)="addColumn()">
-                                    <i class="bi bi-plus-lg"></i> Add Column
+                                    <i class="bi bi-plus-lg"></i> Pridať stĺpec
                                 </button>
                             </div>
 
                             <div class="d-flex justify-content-end mt-3">
-                                <button class="btn btn-secondary me-2" (click)="cancelSubitemEdit()">Cancel</button>
-                                <button class="btn btn-primary" [disabled]="!isValidSubitemDefinition()" (click)="saveSubitemDefinition()">Save</button>
+                                <button class="btn btn-secondary me-2" (click)="cancelSubitemEdit()">Zrušiť</button>
+                                <button class="btn btn-primary" [disabled]="!isValidSubitemDefinition()" (click)="saveSubitemDefinition()">Uložiť</button>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zavrieť</button>
                     </div>
                 </div>
             </div>
@@ -233,18 +233,18 @@ interface Iban { id: string; value: string; }
             <div class="modal-dialog modal-lg">
                 <div class="modal-dialog-scrollable modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="formulaDialogLabel">Formula Editor</h5>
+                        <h5 class="modal-title" id="formulaDialogLabel">Editor vzorcov</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="formulaExpression" class="form-label">Formula Expression</label>
-                            <textarea class="form-control" id="formulaExpression" rows="3" [(ngModel)]="formulaExpression" placeholder="Enter formula expression"></textarea>
-                            <div class="form-text">Create a formula using field names and operators. Example: unitPrice * quantity</div>
+                            <label for="formulaExpression" class="form-label">Výraz vzorca</label>
+                            <textarea class="form-control" id="formulaExpression" rows="3" [(ngModel)]="formulaExpression" placeholder="Zadajte výraz vzorca"></textarea>
+                            <div class="form-text">Vytvorte vzorec pomocou názvov polí a operátorov. Príklad: jednotkováCena * množstvo</div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Available Fields</label>
+                            <label class="form-label">Dostupné polia</label>
                             <div class="d-flex flex-wrap gap-1 mb-2">
                                 <button *ngFor="let col of getAvailableFieldsForFormula()"
                                      class="btn btn-sm btn-outline-secondary formula-button formula-field-button"
@@ -255,7 +255,7 @@ interface Iban { id: string; value: string; }
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Operators</label>
+                            <label class="form-label">Operátory</label>
                             <div class="d-flex flex-wrap gap-1">
                                 <button *ngFor="let op of availableOperators"
                                      class="btn btn-sm btn-outline-secondary formula-button formula-operator-button"
@@ -266,17 +266,17 @@ interface Iban { id: string; value: string; }
                         </div>
 
                         <div class="alert alert-info">
-                            <strong>Tips:</strong>
+                            <strong>Tipy:</strong>
                             <ul class="mb-0">
-                                <li>Use mathematical operators like +, -, *, / for calculations</li>
-                                <li>Use parentheses () to group expressions</li>
-                                <li>Example: (unitPrice * quantity) - discount</li>
+                                <li>Použite matematické operátory ako +, -, *, / pre výpočty</li>
+                                <li>Použite zátvorky () na skupinovanie výrazov</li>
+                                <li>Príklad: (jednotkováCena * množstvo) - zľava</li>
                             </ul>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" (click)="cancelFormula()">Cancel</button>
-                        <button type="button" class="btn btn-primary" (click)="saveFormula()">Save</button>
+                        <button type="button" class="btn btn-secondary" (click)="cancelFormula()">Zrušiť</button>
+                        <button type="button" class="btn btn-primary" (click)="saveFormula()">Uložiť</button>
                     </div>
                 </div>
             </div>
@@ -287,16 +287,16 @@ interface Iban { id: string; value: string; }
             <div class="modal-dialog modal-lg">
                 <div class="modal-dialog-scrollable modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="formRulesDialogLabel">Form Rules</h5>
+                        <h5 class="modal-title" id="formRulesDialogLabel">Automatizácia</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-4">
-                            <p class="text-muted">Configure form rules to add conditional logic and calculations to your form.</p>
+                            <p class="text-muted">Nakonfigurujte pravidlá automatizácie.</p>
                         </div>
 
                         <div *ngIf="formRules.length > 0" class="mb-4">
-                            <h6>Current Rules</h6>
+                            <h6>Aktuálne pravidlá</h6>
                             <div class="list-group">
                                 <div *ngFor="let rule of formRules; let i = index" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                                     <div>
@@ -327,33 +327,33 @@ interface Iban { id: string; value: string; }
 
                         <div class="mb-3">
                             <button class="btn btn-outline-primary" (click)="startNewRule()">
-                                <i class="bi bi-plus-lg"></i> Add New Rule
+                                <i class="bi bi-plus-lg"></i> Pridať nové pravidlo
                             </button>
                             <button class="btn btn-outline-secondary ms-2" (click)="createSampleTaxRule()">
-                                <i class="bi bi-plus-lg"></i> Add Sample Tax Rule
+                                <i class="bi bi-plus-lg"></i> Pridať vzorové pravidlo pre výpočet dane
                             </button>
                         </div>
 
                         <div *ngIf="showRuleForm" class="rule-form border rounded p-3 mt-4">
-                            <h6>{{ editingExistingRule ? 'Edit' : 'New' }} Rule</h6>
+                            <h6>{{ editingExistingRule ? 'Upraviť' : 'Nové' }} pravidlo</h6>
 
                             <div class="mb-3">
-                                <label for="ruleName" class="form-label">Rule Name</label>
-                                <input type="text" class="form-control" id="ruleName" [(ngModel)]="currentRule.name" placeholder="e.g., Show Tax Fields">
+                                <label for="ruleName" class="form-label">Názov pravidla</label>
+                                <input type="text" class="form-control" id="ruleName" [(ngModel)]="currentRule.name" placeholder="napr. Zobraziť polia dane">
                             </div>
 
-                            <h6 class="mt-4">Conditions (If)</h6>
-                            <p class="small text-muted">All conditions must be true for the rule to trigger.</p>
+                            <h6 class="mt-4">Podmienky (Ak)</h6>
+                            <p class="small text-muted">Všetky podmienky musia byť pravdivé, aby sa pravidlo aktivovalo.</p>
 
                             <div *ngIf="currentRule.conditions.length === 0" class="alert alert-light">
-                                No conditions defined yet. Add a condition below.
+                                Ešte nie sú definované žiadne podmienky. Pridajte podmienku nižšie.
                             </div>
 
                             <div *ngFor="let condition of currentRule.conditions; let i = index" class="mb-2 p-2 border rounded">
                                 <div class="row align-items-center g-2">
                                     <div class="col">
                                         <select class="form-select form-select-sm" [(ngModel)]="condition.fieldName">
-                                            <option value="">Select Field</option>
+                                            <option value="">Vyberte pole</option>
                                             <option *ngFor="let field of availableFields" [value]="field.field">
                                                 {{ field.displayName || field.field }}
                                             </option>
@@ -361,18 +361,18 @@ interface Iban { id: string; value: string; }
                                     </div>
                                     <div class="col">
                                         <select class="form-select form-select-sm" [(ngModel)]="condition.operator">
-                                            <option value="equals">Equals</option>
-                                            <option value="notEquals">Not Equals</option>
-                                            <option value="contains">Contains</option>
-                                            <option value="notContains">Not Contains</option>
-                                            <option value="greaterThan">Greater Than</option>
-                                            <option value="lessThan">Less Than</option>
-                                            <option value="isEmpty">Is Empty</option>
-                                            <option value="isNotEmpty">Is Not Empty</option>
+                                            <option value="equals">Rovná sa</option>
+                                            <option value="notEquals">Nerovná sa</option>
+                                            <option value="contains">Obsahuje</option>
+                                            <option value="notContains">Neobsahuje</option>
+                                            <option value="greaterThan">Väčšie ako</option>
+                                            <option value="lessThan">Menej ako</option>
+                                            <option value="isEmpty">Je prázdne</option>
+                                            <option value="isNotEmpty">Nie je prázdne</option>
                                         </select>
                                     </div>
                                     <div class="col" *ngIf="!['isEmpty', 'isNotEmpty'].includes(condition.operator)">
-                                        <input type="text" class="form-control form-control-sm" [(ngModel)]="condition.value" placeholder="Value">
+                                        <input type="text" class="form-control form-control-sm" [(ngModel)]="condition.value" placeholder="Hodnota">
                                     </div>
                                     <div class="col-auto">
                                         <button class="btn btn-sm btn-outline-danger" (click)="removeCondition(i)">
@@ -384,42 +384,42 @@ interface Iban { id: string; value: string; }
 
                             <div class="mb-3 mt-2">
                                 <button class="btn btn-sm btn-outline-primary" (click)="addCondition()">
-                                    <i class="bi bi-plus-lg"></i> Add Condition
+                                    <i class="bi bi-plus-lg"></i> Pridať podmienku
                                 </button>
                             </div>
 
-                            <h6 class="mt-4">Actions (Then)</h6>
+                            <h6 class="mt-4">Akcie (Potom)</h6>
 
                             <div *ngIf="currentRule.actions.length === 0" class="alert alert-light">
-                                No actions defined yet. Add an action below.
+                                Ešte nie sú definované žiadne akcie. Pridajte akciu nižšie.
                             </div>
 
                             <div *ngFor="let action of currentRule.actions; let i = index" class="mb-2 p-2 border rounded">
                                 <div class="row align-items-center g-2">
                                     <div class="col">
                                         <select class="form-select form-select-sm" [(ngModel)]="action.type">
-                                            <option value="enable">Enable</option>
-                                            <option value="disable">Disable</option>
-                                            <option value="show">Show</option>
-                                            <option value="hide">Hide</option>
-                                            <option value="setValue">Set Value</option>
-                                            <option value="calculate">Calculate</option>
+                                            <option value="enable">Povoliť</option>
+                                            <option value="disable">Zakázať</option>
+                                            <option value="show">Zobraziť</option>
+                                            <option value="hide">Skryť</option>
+                                            <option value="setValue">Nastaviť hodnotu</option>
+                                            <option value="calculate">Vypočítať</option>
                                         </select>
                                     </div>
                                     <div class="col">
                                         <select class="form-select form-select-sm" [(ngModel)]="action.targetField">
-                                            <option value="">Select Field</option>
+                                            <option value="">Vyberte pole</option>
                                             <option *ngFor="let field of availableFields" [value]="field.field">
                                                 {{ field.displayName || field.field }}
                                             </option>
                                         </select>
                                     </div>
                                     <div class="col" *ngIf="action.type === 'setValue'">
-                                        <input type="text" class="form-control form-control-sm" [(ngModel)]="action.value" placeholder="Value">
+                                        <input type="text" class="form-control form-control-sm" [(ngModel)]="action.value" placeholder="Hodnota">
                                     </div>
                                     <div class="col" *ngIf="action.type === 'calculate'">
                                         <div class="input-group input-group-sm">
-                                            <input type="text" class="form-control" [(ngModel)]="action.formula" placeholder="e.g. price * 0.2">
+                                            <input type="text" class="form-control" [(ngModel)]="action.formula" placeholder="napr. cena * 0.2">
                                             <button class="btn btn-outline-secondary" type="button" (click)="editFormula(i)">
                                                 <i class="bi bi-calculator"></i>
                                             </button>
@@ -435,18 +435,18 @@ interface Iban { id: string; value: string; }
 
                             <div class="mb-3 mt-2">
                                 <button class="btn btn-sm btn-outline-primary" (click)="addAction()">
-                                    <i class="bi bi-plus-lg"></i> Add Action
+                                    <i class="bi bi-plus-lg"></i> Pridať akciu
                                 </button>
                             </div>
 
                             <div class="d-flex justify-content-end mt-3">
-                                <button class="btn btn-secondary me-2" (click)="cancelRuleEdit()">Cancel</button>
-                                <button class="btn btn-primary" [disabled]="!isValidRule()" (click)="saveRule()">Save Rule</button>
+                                <button class="btn btn-secondary me-2" (click)="cancelRuleEdit()">Zrušiť</button>
+                                <button class="btn btn-primary" [disabled]="!isValidRule()" (click)="saveRule()">Uložiť pravidlo</button>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zavrieť</button>
                     </div>
                 </div>
             </div>
