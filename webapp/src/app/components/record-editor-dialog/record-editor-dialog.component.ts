@@ -593,6 +593,31 @@ import { EvidenceService } from '../../services/evidence.service';
             font-weight: 500;
             color: var(--text-color);
         }
+
+        /* Reference details styling */
+        .reference-details {
+            margin-bottom: 1rem !important;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        .reference-details-content {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.25rem;
+            background-color: var(--app-bg);
+            margin-top: 0.25rem;
+            color: var(--text-color);
+        }
+        .detail-line {
+            margin-bottom: 0.25rem;
+        }
+        .detail-line:last-child {
+            margin-bottom: 0;
+        }
+        .detail-label {
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
     `]
 })
 export class RecordEditorDialogComponent implements OnInit {
@@ -619,6 +644,9 @@ export class RecordEditorDialogComponent implements OnInit {
 
     // Subitems state
     subitems: { [fieldName: string]: SubitemRecord[] } = {};
+
+    // Add to class properties:
+    private referenceDataMap: { [selectName: string]: any[] } = {};
 
     constructor(
         private fb: FormBuilder,
@@ -836,6 +864,44 @@ export class RecordEditorDialogComponent implements OnInit {
                     return `<${tagName} ${attributes.trim()}>${childrenHtml}</${tagName}>`;
                 }
 
+                // Handle reference-select components
+                if (tagName === 'select' && comp.type === 'reference-select') {
+                    this.debugInfo += '\n=== Processing reference-select component ===';
+                    this.debugInfo += `\nOriginal attributes: ${JSON.stringify(attributesObj)}`;
+
+                    const targetEvidenceId = attributesObj['targetEvidenceId'] || attributesObj['data-target-evidence'];
+                    const displayPattern = attributesObj['displayPattern'] || attributesObj['data-display-pattern'];
+
+                    this.debugInfo += `\nExtracted values:`;
+                    this.debugInfo += `\n- targetEvidenceId: ${targetEvidenceId}`;
+                    this.debugInfo += `\n- displayPattern: ${displayPattern}`;
+
+                    // Remove non-data attributes that should be in data- form
+                    delete attributesObj['targetEvidenceId'];
+                    delete attributesObj['displayPattern'];
+
+                    // Ensure data attributes are present
+                    attributesObj['data-gjs-type'] = 'reference-select';
+                    attributesObj['data-target-evidence'] = targetEvidenceId;
+                    attributesObj['data-display-pattern'] = displayPattern;
+
+                    // Re-generate attributes string
+                    attributes = Object.entries(attributesObj)
+                        .map(([key, value]) => `${key}="${value}"`)
+                        .join(' ');
+
+                    this.debugInfo += `\nUpdated attributes: ${JSON.stringify(attributesObj)}`;
+
+                    // Generate the select tag and the details container div
+                    const selectHtml = `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
+                    const detailsDivHtml = `<div class="reference-details" id="details-${attributesObj['name']}"></div>`;
+
+                    this.debugInfo += `\nGenerated HTML: ${selectHtml + detailsDivHtml}`;
+                    this.debugInfo += '\n=== End processing reference-select component ===\n';
+
+                    return selectHtml + detailsDivHtml;
+                }
+
                 // Default return for components not handled above (including selects without data-partners)
                 return `<${tagName} ${attributes.trim()}>${content}${childrenHtml}</${tagName}>`;
             };
@@ -900,17 +966,88 @@ export class RecordEditorDialogComponent implements OnInit {
         }
     }
 
+    private updateReferenceDetails(selectElement: HTMLSelectElement): void {
+        const selectedId = selectElement.value;
+        const selectName = selectElement.name;
+        const detailsDivId = `details-${selectName}`;
+
+        this.debugInfo += `\n=== Updating reference details ===`;
+        this.debugInfo += `\n- Select name: ${selectName}`;
+        this.debugInfo += `\n- Selected ID: ${selectedId}`;
+        this.debugInfo += `\n- Details div ID: ${detailsDivId}`;
+
+        const detailsDiv = this.formContainer.nativeElement.querySelector(`#${detailsDivId}`);
+
+        if (!detailsDiv) {
+            this.debugInfo += `\nDetails container not found for reference select: ${selectName}`;
+            console.warn(`Details container not found for reference select: ${selectName}`);
+            return;
+        }
+
+        // Clear details if no reference is selected or data is missing
+        if (!selectedId || !this.referenceDataMap[selectName]) {
+            this.debugInfo += `\nNo data available for reference ${selectName}`;
+            detailsDiv.innerHTML = '';
+            return;
+        }
+
+        const references = this.referenceDataMap[selectName];
+        this.debugInfo += `\nAvailable references: ${JSON.stringify(references)}`;
+
+        const selectedReference = references.find(r => r.id === selectedId);
+
+        if (selectedReference) {
+            this.debugInfo += `\nFound reference data: ${JSON.stringify(selectedReference)}`;
+
+            // Format details based on the reference data
+            let detailsHtml = '<div class="reference-details-content">';
+
+            // Add all non-empty fields from the reference data
+            Object.entries(selectedReference.data || {}).forEach(([key, value]) => {
+                if (value) {
+                    const label = key.charAt(0).toUpperCase() + key.slice(1);
+                    detailsHtml += `<div class="detail-line"><span class="detail-label">${label}:</span> ${value}</div>`;
+                    this.debugInfo += `\nAdded detail: ${label} = ${value}`;
+                }
+            });
+
+            detailsHtml += '</div>';
+
+            // Use sanitizer for safety
+            detailsDiv.innerHTML = detailsHtml;
+            this.debugInfo += `\nUpdated reference details HTML`;
+        } else {
+            this.debugInfo += `\nNo matching reference found for ID ${selectedId}`;
+            detailsDiv.innerHTML = '';
+        }
+
+        this.debugInfo += '\n=== End updating reference details ===\n';
+    }
+
+    private formatReferenceDisplay(pattern: string, data: any): string {
+        this.debugInfo += `\nFormatting reference display:`;
+        this.debugInfo += `\n- Pattern: ${pattern}`;
+        this.debugInfo += `\n- Data: ${JSON.stringify(data)}`;
+
+        const result = pattern.replace(/\{([^}]+)\}/g, (match, field) => {
+            const value = data[field] || '';
+            this.debugInfo += `\n- Replacing ${match} with ${value}`;
+            return value;
+        });
+
+        this.debugInfo += `\n- Result: ${result}`;
+        return result;
+    }
+
     ngOnInit(): void {
         // Initialize dynamic form controls after view is initialized
         setTimeout(() => {
             this.initializeFormControls();
+            this.loadReferenceData();
             // Trigger initial details update for selects in edit mode
             if (this.data.mode === 'edit' && this.data.record) {
                 this.updateInitialPartnerDetails();
             }
-
-            // *** DEBUG: Check partnerDataMap content ***
-            console.log('Partner Data Map after init:', JSON.stringify(this.partnerDataMap));
 
             // Focus logic
             const docNumberInput = document.getElementById('doc-number');
@@ -962,9 +1099,16 @@ export class RecordEditorDialogComponent implements OnInit {
             }
 
             // Initialize control with value from record in edit mode, otherwise empty string
-            const initialValue = (this.data.mode === 'edit' && this.data.record?.data[name])
-                                ? this.data.record.data[name]
-                                : '';
+            let initialValue = '';
+            if (this.data.mode === 'edit' && this.data.record?.data[name]) {
+                const value = this.data.record.data[name];
+                if (htmlInput.getAttribute('data-gjs-type') === 'reference-select') {
+                    // For reference fields, use the ID or the value itself
+                    initialValue = typeof value === 'object' ? value.id : value;
+                } else {
+                    initialValue = value;
+                }
+            }
             formControls[name] = [initialValue];
 
             // Add event listener for input/change
@@ -981,6 +1125,11 @@ export class RecordEditorDialogComponent implements OnInit {
                     this.updatePartnerDetails(target as HTMLSelectElement);
                 }
 
+                // If it's a reference select, update reference details
+                if (target.tagName === 'SELECT' && target.getAttribute('data-gjs-type') === 'reference-select') {
+                    this.updateReferenceDetails(target as HTMLSelectElement);
+                }
+
                 // Apply form rules after value changes
                 this.applyFormRules();
             });
@@ -990,26 +1139,20 @@ export class RecordEditorDialogComponent implements OnInit {
                 const value = this.data.record.data[name];
                 if (htmlInput.type === 'checkbox' && htmlInput instanceof HTMLInputElement) {
                     htmlInput.checked = !!value;
-                } else if (htmlInput.tagName !== 'SELECT') {
+                } else if (htmlInput.tagName === 'SELECT') {
+                    if (htmlInput.getAttribute('data-gjs-type') === 'reference-select') {
+                        // For reference fields, use the ID or the value itself
+                        htmlInput.value = typeof value === 'object' ? value.id : (value || '');
+                    } else {
+                        htmlInput.value = value || '';
+                    }
+                } else {
                     htmlInput.value = value || '';
                 }
             }
         });
 
         this.recordForm = this.fb.group(formControls);
-
-        // Set initial values for SELECT elements
-        if (this.data.mode === 'edit' && this.data.record) {
-             inputs.forEach((input: Element) => {
-                if (input.tagName === 'SELECT') {
-                    const htmlInput = input as HTMLSelectElement;
-                    const name = htmlInput.getAttribute('name') || htmlInput.id;
-                     if (name && this.data.record?.data[name]) {
-                        htmlInput.value = this.data.record.data[name];
-                    }
-                }
-            });
-        }
 
         // Apply initial form rules
         this.applyFormRules();
@@ -1216,10 +1359,11 @@ export class RecordEditorDialogComponent implements OnInit {
         this.dialogRef.close(record);
     }
 
-    // Helper method to extract form values
+    // Update extractFormValues method to add logging:
     private extractFormValues(): any {
         // Extract form values
         const formValues: { [key: string]: any } = {};
+        this.debugInfo += '\nExtracting form values';
 
         // Get all form fields
         const formElements = this.formContainer.nativeElement.querySelectorAll('input, select, textarea');
@@ -1229,12 +1373,38 @@ export class RecordEditorDialogComponent implements OnInit {
                     formValues[element.name] = element.checked;
                 } else if (element.type === 'number') {
                     formValues[element.name] = element.value !== '' ? Number(element.value) : null;
+                } else if (element.getAttribute('data-gjs-type') === 'reference-select') {
+                    // For reference fields, store both the ID and the display value
+                    const selectedId = element.value;
+                    this.debugInfo += `\nProcessing reference field ${element.name}, selected ID: ${selectedId}`;
+
+                    if (selectedId && this.referenceDataMap[element.name]) {
+                        const selectedReference = this.referenceDataMap[element.name].find(r => r.id === selectedId);
+                        if (selectedReference) {
+                            const displayPattern = element.getAttribute('data-display-pattern') || '';
+                            const display = this.formatReferenceDisplay(displayPattern, selectedReference.data);
+
+                            formValues[element.name] = {
+                                id: selectedId,
+                                display,
+                                data: selectedReference.data
+                            };
+                            this.debugInfo += `\nStored reference value for ${element.name}: ${JSON.stringify(formValues[element.name])}`;
+                        } else {
+                            this.debugInfo += `\nNo matching reference found for ID ${selectedId}`;
+                            formValues[element.name] = null;
+                        }
+                    } else {
+                        this.debugInfo += `\nNo reference data available for ${element.name}`;
+                        formValues[element.name] = null;
+                    }
                 } else {
                     formValues[element.name] = element.value;
                 }
             }
         });
 
+        this.debugInfo += `\nExtracted form values: ${JSON.stringify(formValues)}`;
         return formValues;
     }
 
@@ -1625,5 +1795,80 @@ export class RecordEditorDialogComponent implements OnInit {
             elem = elem.parentElement;
         }
         return elem;
+    }
+
+    // Add new method to load reference data
+    private loadReferenceData(): void {
+        this.debugInfo += '\nStarting to load reference data...';
+        const formContainer = this.formContainer.nativeElement;
+        if (!formContainer) {
+            this.debugInfo += '\nForm container not found';
+            return;
+        }
+
+        // Log all select elements and their attributes for debugging
+        const allSelects = formContainer.querySelectorAll('select');
+        this.debugInfo += `\nFound ${allSelects.length} total select elements`;
+        allSelects.forEach((select: HTMLSelectElement) => {
+            this.debugInfo += `\nSelect element: ${select.name}`;
+            this.debugInfo += `\n- data-gjs-type: ${select.getAttribute('data-gjs-type')}`;
+            this.debugInfo += `\n- data-target-evidence: ${select.getAttribute('data-target-evidence')}`;
+            this.debugInfo += `\n- data-display-pattern: ${select.getAttribute('data-display-pattern')}`;
+        });
+
+        const referenceSelects = formContainer.querySelectorAll('select[data-gjs-type="reference-select"]');
+        this.debugInfo += `\nFound ${referenceSelects.length} reference-select elements`;
+
+        referenceSelects.forEach((select: HTMLSelectElement) => {
+            const targetEvidenceId = select.getAttribute('data-target-evidence');
+            const displayPattern = select.getAttribute('data-display-pattern');
+            const selectName = select.name;
+
+            this.debugInfo += `\nProcessing reference-select: ${selectName}`;
+            this.debugInfo += `\n- Target Evidence ID: ${targetEvidenceId}`;
+            this.debugInfo += `\n- Display Pattern: ${displayPattern}`;
+
+            if (targetEvidenceId && displayPattern) {
+                this.debugInfo += '\nCalling evidenceService.getRecords...';
+                this.evidenceService.getRecords(targetEvidenceId).subscribe({
+                    next: (records) => {
+                        this.debugInfo += `\nReceived ${records.length} records for ${selectName}`;
+                        this.referenceDataMap[selectName] = records;
+
+                        // Update select options
+                        select.innerHTML = '<option value="">Select reference...</option>';
+                        records.forEach(record => {
+                            const option = document.createElement('option');
+                            option.value = record.id;
+                            const displayText = this.formatReferenceDisplay(displayPattern, record.data);
+                            option.textContent = displayText;
+                            this.debugInfo += `\nAdding option: ${displayText} (${record.id})`;
+                            select.appendChild(option);
+                        });
+
+                        // Set initial value if in edit mode
+                        if (this.data.mode === 'edit' && this.data.record?.data[selectName]) {
+                            const referenceValue = this.data.record.data[selectName];
+                            this.debugInfo += `\nSetting initial value for ${selectName}: ${JSON.stringify(referenceValue)}`;
+
+                            if (typeof referenceValue === 'object' && referenceValue.id) {
+                                select.value = referenceValue.id;
+                                this.debugInfo += `\nSet value to ${referenceValue.id}`;
+                            } else {
+                                select.value = referenceValue || '';
+                                this.debugInfo += `\nSet value to ${referenceValue}`;
+                            }
+                            this.updateReferenceDetails(select);
+                        }
+                    },
+                    error: (error) => {
+                        this.debugInfo += `\nError loading reference data for ${selectName}: ${error}`;
+                        console.error('Error loading reference data:', error);
+                    }
+                });
+            } else {
+                this.debugInfo += `\nMissing required attributes for ${selectName}`;
+            }
+        });
     }
 }

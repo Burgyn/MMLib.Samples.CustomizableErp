@@ -17,6 +17,7 @@ export interface Evidence {
     formDefinition: string; // GrapesJS JSON
     gridColumns: GridColumn[];
     subitemDefinitions?: SubitemDefinition[];
+    references?: EvidenceReference[];
     createdAt: Date;
     updatedAt: Date;
     formRules?: FormRule[];
@@ -80,4 +81,12 @@ export interface RuleAction {
     targetField: string;
     value?: string | number;
     formula?: string;
+}
+
+// Add new interface for evidence references
+export interface EvidenceReference {
+    id: string;
+    name: string;
+    targetEvidenceId: string;
+    displayPattern: string; // Pattern like "{firstName} - {lastName}"
 }

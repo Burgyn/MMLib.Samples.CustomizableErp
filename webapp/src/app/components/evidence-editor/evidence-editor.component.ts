@@ -1,7 +1,7 @@
 import * as bootstrap from 'bootstrap';
 
 import { ActivatedRoute, Router } from '@angular/router';
-import { Category, Evidence, FormRule, GridColumn, RuleAction, RuleCondition, SubitemDefinition } from '../../models/evidence.model';
+import { Category, Evidence, EvidenceReference, FormRule, GridColumn, RuleAction, RuleCondition, SubitemDefinition } from '../../models/evidence.model';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { Editor, Component as GrapesComponent } from 'grapesjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -861,6 +861,17 @@ body {
                                  </div>`,
                          attributes: { 'data-gjs-type': 'currency-rate', 'data-gjs-displayName': 'Mena/Kurz' }
                     },
+                    {
+                        id: 'reference-select-block',
+                        label: 'Reference Selector',
+                        category: 'Form Fields',
+                        media: '<i class="bi bi-link-45deg fs-4"></i>',
+                        content: `<div class="mb-3">
+                            <label class="form-label">Reference Field</label>
+                            <select class="form-select" data-gjs-type="reference-select"></select>
+                        </div>`,
+                        attributes: { 'data-gjs-type': 'reference-select' }
+                    },
                 ]
             }
         });
@@ -1132,6 +1143,111 @@ body {
              }
         });
 
+        // New Component Type: reference-select
+        this.editor.DomComponents.addType('reference-select', {
+            isComponent: (el) => el.getAttribute && el.getAttribute('data-gjs-type') === 'reference-select',
+            model: {
+                defaults: {
+                    traits: [
+                        { type: 'text', name: 'name', label: 'Field Name (ID)' },
+                        { type: 'text', name: 'displayName', label: 'Display Name' },
+                        {
+                            type: 'select',
+                            name: 'targetEvidenceId',
+                            label: 'Target Evidence',
+                            options: [] // Will be populated dynamically
+                        },
+                        { type: 'text', name: 'displayPattern', label: 'Display Pattern', placeholder: '{firstName} - {lastName}' },
+                        { type: 'checkbox', name: 'required', label: 'Required' }
+                    ],
+                    script: function() {
+                        const selectElement = this as unknown as HTMLSelectElement;
+                        const componentId = selectElement.getAttribute('data-gjs-comp-id');
+                        const targetEvidenceId = selectElement.getAttribute('data-target-evidence');
+                        const displayPattern = selectElement.getAttribute('data-display-pattern');
+
+                        // Request data from the Angular component
+                        window.parent.postMessage({
+                            type: 'fetchReferenceData',
+                            componentId: componentId,
+                            targetEvidenceId: targetEvidenceId,
+                            displayPattern: displayPattern
+                        }, '*');
+                    },
+                    'script-props': ['data-target-evidence', 'data-display-pattern'] // Add script props
+                }
+            },
+            view: {
+                init() {
+                    this.listenTo(this.model, 'change:attributes', this['handleDataResponse']);
+                    this.listenTo(this.model.get('traits'), 'change', this['handleTraitChange']);
+
+                    // Add a unique ID attribute to the element in the canvas for correlation
+                    const componentId = this.model.getId();
+                    this.model.addAttributes({ 'data-gjs-comp-id': componentId });
+
+                    // Update traits when component is first added
+                    this['updateTraits']();
+                },
+                ['handleDataResponse'](model: GrapesComponent, attributes: any) {
+                    if (attributes['data-reference-options']) {
+                        try {
+                            const options = JSON.parse(attributes['data-reference-options']);
+                            const selectEl = this.el.querySelector('select');
+                            if (selectEl) {
+                                selectEl.innerHTML = '<option value="">Select reference...</option>';
+                                options.forEach((opt: any) => {
+                                    const option = document.createElement('option');
+                                    option.value = opt.id;
+                                    option.textContent = opt.display;
+                                    selectEl.appendChild(option);
+                                });
+                                // Remove the temporary attribute
+                                model.removeAttributes('data-reference-options');
+                            }
+                        } catch (e) {
+                            console.error('Error parsing reference options:', e);
+                        }
+                    }
+                },
+                ['updateTraits']() {
+                    // Get all available evidences and update the targetEvidenceId trait options
+                    const component = this.model;
+                    window.parent.postMessage({
+                        type: 'getAvailableEvidences',
+                        componentId: component.getId()
+                    }, '*');
+                },
+                ['handleTraitChange'](trait: any) {
+                    if (trait.changed.value !== undefined) {
+                        const traitName = trait.get('name');
+                        const value = trait.get('value');
+
+                        if (traitName === 'targetEvidenceId') {
+                            this.model.addAttributes({ 'data-target-evidence': value });
+                        } else if (traitName === 'displayPattern') {
+                            this.model.addAttributes({ 'data-display-pattern': value });
+                        }
+
+                        // Request updated data if needed
+                        if (traitName === 'targetEvidenceId' || traitName === 'displayPattern') {
+                            const targetEvidenceId = this.model.getTrait('targetEvidenceId')?.get('value');
+                            const displayPattern = this.model.getTrait('displayPattern')?.get('value');
+
+                            if (targetEvidenceId && displayPattern) {
+                                window.parent.postMessage({
+                                    type: 'fetchReferenceData',
+                                    componentId: this.model.getId(),
+                                    targetEvidenceId,
+                                    displayPattern
+                                }, '*');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         // --- Message Listener for Data Fetching (add this in the component class) ---
         this.setupiframeMessageListener();
 
@@ -1165,6 +1281,44 @@ body {
 
             // We've removed the IBAN-select component in favor of a regular select
             // No need to fetch IBAN data anymore
+
+            if (type === 'getAvailableEvidences' && componentId && this.editor) {
+                this.evidenceService.getAllEvidences().subscribe(evidences => {
+                    const component = this.editor?.DomComponents.componentsById[componentId];
+                    if (component) {
+                        const trait = component.getTrait('targetEvidenceId');
+                        if (trait) {
+                            trait.set('options', evidences.map(e => ({
+                                id: e.id,
+                                name: e.name
+                            })));
+                        }
+                    }
+                });
+            } else if (type === 'fetchReferenceData' && componentId && this.editor) {
+                const component = this.editor?.DomComponents.componentsById[componentId];
+                if (!component) return;
+
+                const targetEvidenceId = event.data.targetEvidenceId;
+                const displayPattern = event.data.displayPattern;
+
+                if (!targetEvidenceId || !displayPattern) {
+                    console.warn('Missing targetEvidenceId or displayPattern for reference select');
+                    return;
+                }
+
+                // Fetch records from target evidence
+                this.evidenceService.getRecords(targetEvidenceId).subscribe(records => {
+                    // Format records according to display pattern
+                    const options = records.map(record => ({
+                        id: record.id,
+                        display: this.formatReferenceDisplay(displayPattern, record.data)
+                    }));
+
+                    // Pass data back via temporary attribute change
+                    component.addAttributes({ 'data-reference-options': JSON.stringify(options) });
+                });
+            }
         });
     }
 
@@ -1206,6 +1360,9 @@ body {
         // Extract grid columns from editor
         const gridColumns = this.extractGridColumns(this.editor);
 
+        // Extract references from editor
+        const references = this.extractReferences(this.editor);
+
         // Prepare evidence data
         const evidenceData: Partial<Evidence> = {
             name: formValues.name,
@@ -1213,7 +1370,8 @@ body {
             formDefinition: JSON.stringify(this.editor.getProjectData()),
             gridColumns,
             subitemDefinitions: this.subitemDefinitions,
-            formRules: this.formRules, // Add form rules
+            references, // Add references
+            formRules: this.formRules,
             updatedAt: new Date()
         };
 
@@ -2769,5 +2927,53 @@ body {
 
         // Apply rules to editor preview
         this.applyRulesToEditorPreview();
+    }
+
+    private formatReferenceDisplay(pattern: string, data: any): string {
+        return pattern.replace(/\{([^}]+)\}/g, (match, field) => {
+            return data[field] || '';
+        });
+    }
+
+    // Add new method to extract references:
+    private extractReferences(editor: Editor): EvidenceReference[] {
+        const references: EvidenceReference[] = [];
+        const wrapper = editor.DomComponents.getWrapper();
+        if (!wrapper) return references;
+
+        // Find all reference-select components
+        const components = wrapper.find('[data-gjs-type="reference-select"]');
+
+        components.forEach((component: GrapesComponent) => {
+            const nameTrait = component.getTrait('name');
+            const name = nameTrait?.get('value');
+
+            if (name) {
+                const targetEvidenceIdTrait = component.getTrait('targetEvidenceId');
+                const displayPatternTrait = component.getTrait('displayPattern');
+                const displayNameTrait = component.getTrait('displayName');
+
+                const targetEvidenceId = targetEvidenceIdTrait?.get('value');
+                const displayPattern = displayPatternTrait?.get('value');
+                const displayName = displayNameTrait?.get('value');
+
+                if (targetEvidenceId && displayPattern) {
+                    // Add data attributes to the component
+                    component.addAttributes({
+                        'data-target-evidence': targetEvidenceId,
+                        'data-display-pattern': displayPattern
+                    });
+
+                    references.push({
+                        id: name, // Use field name as reference ID
+                        name: displayName || name,
+                        targetEvidenceId,
+                        displayPattern
+                    });
+                }
+            }
+        });
+
+        return references;
     }
 }
