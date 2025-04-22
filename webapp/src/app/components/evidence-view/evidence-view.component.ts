@@ -320,7 +320,12 @@ export class EvidenceViewComponent implements OnInit {
             data: {
                 evidence: this.evidence,
                 mode: 'create'
-            }
+            },
+            maxWidth: '100vw',
+            width: '100%',
+            height: '100%',
+            panelClass: ['fullscreen-dialog', 'record-editor-dialog-container'],
+            disableClose: true
         });
 
         dialogRef.afterClosed().subscribe((record: Partial<EvidenceRecord>) => {
@@ -341,7 +346,12 @@ export class EvidenceViewComponent implements OnInit {
                 evidence: this.evidence,
                 record: record,
                 mode: 'edit'
-            }
+            },
+            maxWidth: '100vw',
+            width: '100%',
+            height: '100%',
+            panelClass: ['fullscreen-dialog', 'record-editor-dialog-container'],
+            disableClose: true
         });
 
         dialogRef.afterClosed().subscribe((updatedRecord: Partial<EvidenceRecord>) => {

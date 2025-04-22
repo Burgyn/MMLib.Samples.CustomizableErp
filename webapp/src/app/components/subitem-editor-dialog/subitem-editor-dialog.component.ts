@@ -88,7 +88,9 @@ import { EvidenceService } from '../../services/evidence.service';
     `,
     styles: [`
         .subitem-editor-dialog {
-            min-width: 500px;
+            min-width: auto;
+            width: 100%;
+            max-width: 100%;
             background: var(--component-bg);
             border-radius: 0.375rem;
             display: flex;
@@ -100,7 +102,7 @@ import { EvidenceService } from '../../services/evidence.service';
         }
 
         .dialog-header {
-            padding: 1rem 1.5rem;
+            padding: 1rem;
             background: var(--component-bg);
             flex-shrink: 0;
             border-bottom: 1px solid var(--border-color);
@@ -108,14 +110,14 @@ import { EvidenceService } from '../../services/evidence.service';
 
         .dialog-header h2 {
             color: var(--text-color);
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 500;
             margin-bottom: 0;
         }
 
         .content-panel {
             background-color: var(--component-bg);
-            padding: 1.5rem;
+            padding: 1rem;
             border-radius: 0.375rem;
         }
 
@@ -124,12 +126,18 @@ import { EvidenceService } from '../../services/evidence.service';
             font-weight: 500;
             color: var(--text-color);
             margin-bottom: 0.5rem;
+            display: block;
         }
 
         .form-control {
             background-color: var(--component-bg);
             color: var(--text-color);
             border-color: var(--border-color);
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-radius: 0.25rem;
         }
 
         .form-control:focus {
@@ -140,6 +148,7 @@ import { EvidenceService } from '../../services/evidence.service';
         .form-check-input {
             background-color: var(--component-bg);
             border-color: var(--border-color);
+            margin-top: 0.25rem;
         }
 
         .form-check-input:checked {
@@ -148,9 +157,15 @@ import { EvidenceService } from '../../services/evidence.service';
         }
 
         .dialog-actions {
-            padding: 1rem 1.5rem;
+            padding: 1rem;
             background: var(--component-bg);
             border-top: 1px solid var(--border-color);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            min-height: 44px;
         }
 
         .btn-primary {
@@ -185,6 +200,47 @@ import { EvidenceService } from '../../services/evidence.service';
             background-color: rgba(var(--primary-rgb), 0.05);
             border-color: rgba(var(--primary-rgb), 0.2);
             color: var(--text-color);
+        }
+
+        @media (max-width: 768px) {
+            .subitem-editor-dialog {
+                border-radius: 0;
+                border: none;
+                height: 100vh;
+            }
+
+            .dialog-header {
+                padding: 0.75rem;
+            }
+
+            .dialog-header h2 {
+                font-size: 1.125rem;
+            }
+
+            .content-panel {
+                padding: 0.75rem;
+            }
+
+            .form-control {
+                font-size: 1rem;
+                padding: 0.375rem 0.75rem;
+            }
+
+            .dialog-actions {
+                padding: 0.75rem;
+                position: sticky;
+                bottom: 0;
+                z-index: 1;
+            }
+
+            .col-md-6 {
+                width: 100%;
+                padding: 0;
+            }
+
+            .row {
+                margin: 0;
+            }
         }
     `]
 })

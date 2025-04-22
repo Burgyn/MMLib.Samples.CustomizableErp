@@ -19,17 +19,15 @@ import { EvidenceService } from '../../services/evidence.service';
                 <h2 mat-dialog-title id="dialog-title" class="mb-3">{{ data.evidence.name }}</h2>
 
                 <!-- Document Number -->
-                <div class="mb-3 row align-items-center form-group-sm">
-                    <label for="doc-number" class="col-sm-2 col-form-label">Číslo</label>
-                    <div class="col-sm-10">
-                        <input type="text" id="doc-number" class="form-control" [(ngModel)]="documentNumber" placeholder="Zadajte číslo záznamu...">
-                    </div>
+                <div class="mb-3">
+                    <label for="doc-number" class="form-label">Číslo</label>
+                    <input type="text" id="doc-number" class="form-control" [(ngModel)]="documentNumber" placeholder="Zadajte číslo záznamu...">
                 </div>
 
                 <!-- Tags -->
-                <div class="mb-3 row align-items-center form-group-sm">
-                    <label class="col-sm-2 col-form-label">Tagy</label>
-                    <div class="col-sm-10 tags-section">
+                <div class="mb-3">
+                    <label class="form-label">Tagy</label>
+                    <div class="tags-section">
                         <span *ngFor="let tag of tags; let i = index" class="tag-badge badge me-1" [style.background-color]="getTagColor(tag)">
                             {{ tag }}
                             <button type="button" class="btn-close btn-close-white" aria-label="Remove tag" (click)="removeTag(i)"></button>
@@ -139,8 +137,10 @@ import { EvidenceService } from '../../services/evidence.service';
             font-family: inherit !important; /* Force font inheritance */
         }
         .record-editor-dialog {
-            min-width: 600px;
-            width: 80vw;
+            min-width: auto;
+            width: 100%;
+            max-width: 100%;
+            max-height: 100vh;
             background: var(--component-bg);
             border-radius: 0.375rem;
             display: flex;
@@ -151,15 +151,175 @@ import { EvidenceService } from '../../services/evidence.service';
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
         .dialog-header {
-            padding: 1rem 1.5rem;
+            padding: 1rem;
             background: var(--component-bg);
             flex-shrink: 0;
             border-bottom: 1px solid var(--border-color);
         }
         .dialog-header h2 {
             color: var(--text-color);
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+        }
+        .form-control {
+            width: 100%;
+            max-width: 100%;
+            padding: 0.5rem 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            border: 1px solid var(--border-color);
+            border-radius: 0.25rem;
+            background-color: var(--component-bg);
+            color: var(--text-color);
+        }
+        .tags-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .tag-badge {
+            margin: 0;
+            white-space: nowrap;
+            font-size: 0.875rem;
+            padding: 0.35em 0.65em;
+            border-radius: 0.9rem;
+        }
+        .add-tag-wrapper {
+            flex: 1;
+            min-width: 150px;
+            position: relative;
+        }
+        .add-tag-input {
+            width: 100%;
+            padding-right: 2rem;
+        }
+        .add-tag-btn {
+            position: absolute;
+            right: 3px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: calc(100% - 6px);
+            width: 25px;
+            padding: 0;
+            line-height: 1;
+            border: none;
+            background: none;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .dialog-header {
+                padding: 0.75rem;
+            }
+            .dialog-header h2 {
+                font-size: 1.125rem;
+                margin-bottom: 0.75rem;
+            }
+            .form-control {
+                font-size: 1rem;
+                padding: 0.375rem 0.75rem;
+            }
+            .tags-section {
+                margin-top: 0.5rem;
+            }
+            .tag-badge {
+                font-size: 0.8125rem;
+            }
+            .add-tag-wrapper {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+        }
+        .form-group-sm {
+            margin-bottom: 1rem;
+        }
+        @media (max-width: 768px) {
+            .record-editor-dialog {
+                border-radius: 0;
+                border: none;
+            }
+            .dialog-header {
+                padding: 0.75rem;
+            }
+            .content-background {
+                padding: 0.75rem;
+            }
+            .form-group-sm {
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 1rem;
+            }
+            .col-form-label {
+                padding: 0;
+                margin-bottom: 0.5rem;
+                text-align: left;
+            }
+            .col-sm-2,
+            .col-sm-10 {
+                width: 100%;
+                padding: 0;
+            }
+            .form-control,
+            .add-tag-input {
+                width: 100%;
+                max-width: 100%;
+            }
+            .tags-section {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                align-items: center;
+            }
+            .add-tag-wrapper {
+                flex: 1;
+                min-width: 150px;
+            }
+            .tag-badge {
+                margin: 0;
+                white-space: nowrap;
+            }
+            .form-fields {
+                .row {
+                    margin: 0;
+                }
+                .col,
+                [class^="col-"] {
+                    padding: 0;
+                    margin-bottom: 1rem;
+                    width: 100%;
+                }
+                input,
+                select,
+                textarea {
+                    width: 100%;
+                    max-width: 100%;
+                    margin-bottom: 0;
+                }
+                label {
+                    margin-bottom: 0.5rem;
+                }
+            }
+            .dialog-actions {
+                padding: 0.75rem;
+                border-top: 1px solid var(--border-color);
+                background: var(--component-bg);
+                position: sticky;
+                bottom: 0;
+                z-index: 1;
+            }
+            .btn {
+                min-height: 44px;
+                padding: 0.5rem 1rem;
+            }
         }
         /* More specific label styling - closer to Faktura */
         .record-editor-dialog .dialog-header .form-label,
@@ -1466,14 +1626,22 @@ export class RecordEditorDialogComponent implements OnInit {
 
     // Add a new subitem
     addSubitem(subitemDef: SubitemDefinition): void {
-        const dialogRef = this.dialog.open(SubitemEditorDialogComponent, {
-            width: '600px',
+        const isMobile = window.innerWidth <= 768;
+        const dialogConfig = {
             data: {
                 subitemDefinition: subitemDef,
                 parentRecordId: this.data.record?.id || 'temp',
                 mode: 'create'
-            }
-        });
+            },
+            width: isMobile ? '100%' : '600px',
+            ...(isMobile && {
+                maxWidth: '100vw',
+                height: '100%',
+                panelClass: 'fullscreen-dialog'
+            })
+        };
+
+        const dialogRef = this.dialog.open(SubitemEditorDialogComponent, dialogConfig);
 
         dialogRef.afterClosed().subscribe(result => {
             if (result) {
@@ -1490,15 +1658,23 @@ export class RecordEditorDialogComponent implements OnInit {
 
     // Edit an existing subitem
     editSubitem(subitemDef: SubitemDefinition, record: SubitemRecord): void {
-        const dialogRef = this.dialog.open(SubitemEditorDialogComponent, {
-            width: '600px',
+        const isMobile = window.innerWidth <= 768;
+        const dialogConfig = {
             data: {
                 subitemDefinition: subitemDef,
                 record: record,
                 parentRecordId: this.data.record?.id || 'temp',
                 mode: 'edit'
-            }
-        });
+            },
+            width: isMobile ? '100%' : '600px',
+            ...(isMobile && {
+                maxWidth: '100vw',
+                height: '100%',
+                panelClass: 'fullscreen-dialog'
+            })
+        };
+
+        const dialogRef = this.dialog.open(SubitemEditorDialogComponent, dialogConfig);
 
         dialogRef.afterClosed().subscribe(result => {
             if (result) {

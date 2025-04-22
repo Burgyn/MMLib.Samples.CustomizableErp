@@ -2,11 +2,11 @@ import { Category, Evidence } from '../../models/evidence.model';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Router, RouterModule } from '@angular/router';
-import { Subscription } from 'rxjs';
 
 import { CategoryDialogComponent } from '../category-dialog/category-dialog.component';
 import { CommonModule } from '@angular/common';
 import { EvidenceService } from '../../services/evidence.service';
+import { Subscription } from 'rxjs';
 
 interface MenuCategory extends Category {
     evidences: Evidence[];
@@ -51,7 +51,8 @@ interface MenuCategory extends Category {
                         <a *ngFor="let evidence of category.evidences"
                            [routerLink]="['/evidence', evidence.id]"
                            routerLinkActive="active"
-                           class="menu-item">
+                           class="menu-item"
+                           (click)="closeMenu()">
                             <i class="bi" [class]="evidence.icon || 'bi-table'"></i>
                             <span class="ms-2">{{ evidence.name }}</span>
                         </a>
@@ -150,6 +151,13 @@ interface MenuCategory extends Category {
                 color: var(--danger-color) !important;
             }
         }
+
+        @media (max-width: 768px) {
+            .side-menu {
+                width: 100%;
+                max-width: 280px;
+            }
+        }
     `]
 })
 export class SideMenuComponent implements OnInit, OnDestroy {
@@ -186,6 +194,12 @@ export class SideMenuComponent implements OnInit, OnDestroy {
     ngOnDestroy(): void {
         // Clean up subscriptions
         this.subscriptions.unsubscribe();
+    }
+
+    closeMenu(): void {
+        // This will be handled by the parent component
+        const event = new CustomEvent('closeSidebar');
+        window.dispatchEvent(event);
     }
 
     private loadCategories(): void {

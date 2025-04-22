@@ -15,6 +15,9 @@ import { ThemeService } from './services/theme.service';
         <div class="app-container">
             <header class="app-header">
                 <div class="brand">
+                    <button class="btn btn-link hamburger-menu" (click)="toggleSidebar()">
+                        <i class="bi bi-list"></i>
+                    </button>
                     <i class="bi bi-box"></i>
                     <span class="ms-2">Super EShop</span>
                 </div>
@@ -62,7 +65,7 @@ import { ThemeService } from './services/theme.service';
                 </div>
             </header>
             <div class="app-content">
-                <app-side-menu></app-side-menu>
+                <app-side-menu [class.sidebar-collapsed]="!isSidebarOpen"></app-side-menu>
                 <main class="main-content">
                     <router-outlet></router-outlet>
                 </main>
@@ -103,6 +106,18 @@ import { ThemeService } from './services/theme.service';
             font-weight: 500;
             color: var(--text-color);
             transition: color 0.3s ease;
+        }
+
+        .hamburger-menu {
+            display: none;
+            margin-right: 0.5rem;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            padding: 0.25rem;
+        }
+
+        .hamburger-menu:hover {
+            color: var(--text-color);
         }
 
         .header-actions {
@@ -199,6 +214,31 @@ import { ThemeService } from './services/theme.service';
             margin-right: 0.5rem;
             color: var(--primary-color);
         }
+
+        /* Mobile styles */
+        @media (max-width: 768px) {
+            .hamburger-menu {
+                display: block;
+            }
+
+            app-side-menu {
+                position: fixed;
+                top: 56px;
+                left: 0;
+                bottom: 0;
+                z-index: 1000;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            app-side-menu.sidebar-collapsed {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
     `]
 })
 export class AppComponent implements OnInit {
@@ -208,6 +248,7 @@ export class AppComponent implements OnInit {
     loadingMessage = 'Prosím čakajte...';
     currentTheme = 'light';
     isThemeMenuOpen = false;
+    isSidebarOpen = false;
 
     constructor(
         private evidenceService: EvidenceService,
@@ -233,6 +274,25 @@ export class AppComponent implements OnInit {
                 this.isThemeMenuOpen = false;
             }
         });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (event) => {
+            if (this.isSidebarOpen && window.innerWidth <= 768) {
+                const target = event.target as HTMLElement;
+                if (!target.closest('app-side-menu') && !target.closest('.hamburger-menu')) {
+                    this.isSidebarOpen = false;
+                }
+            }
+        });
+
+        // Listen for closeSidebar event from side menu
+        window.addEventListener('closeSidebar', () => {
+            this.isSidebarOpen = false;
+        });
+    }
+
+    toggleSidebar(): void {
+        this.isSidebarOpen = !this.isSidebarOpen;
     }
 
     /**
