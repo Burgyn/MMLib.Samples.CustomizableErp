@@ -71,13 +71,15 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
         .view-container {
             display: flex;
             flex-direction: column;
-            height: 100vh;
+            height: calc(100vh - 56px);
             background: var(--component-bg);
+            padding: 0;
         }
 
         .toolbar {
             background-color: var(--component-bg);
             border-bottom: 1px solid var(--border-color);
+            margin: 0;
         }
 
         .evidence-title {
@@ -143,6 +145,7 @@ import { RecordEditorDialogComponent } from '../record-editor-dialog/record-edit
         .grid-container {
             flex: 1;
             width: 100%;
+            height: 100%;
         }
 
         .actions {
@@ -275,13 +278,13 @@ export class EvidenceViewComponent implements OnInit {
         this.columnDefs.push({
             headerName: 'Akcie',
             field: 'actions',
-            width: 150,
+            width: 220,
             sortable: false,
             filter: false,
             pinned: 'right',
             cellRenderer: (params: any) => {
                 return `
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 px-3">
                         <button class="btn btn-sm btn-outline-primary" data-action="edit">
                             <i class="bi bi-pencil"></i>
                         </button>
