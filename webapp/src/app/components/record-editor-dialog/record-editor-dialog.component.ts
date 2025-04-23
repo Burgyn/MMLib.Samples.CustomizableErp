@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angul
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { Evidence, EvidenceRecord, SubitemDefinition, SubitemRecord, FormRule, RuleAction, RuleCondition } from '../../models/evidence.model';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { AgGridModule } from 'ag-grid-angular';
+import { AgGridModule, AgGridAngular } from 'ag-grid-angular';
 import { SubitemEditorDialogComponent } from '../subitem-editor-dialog/subitem-editor-dialog.component';
 import { EvidenceService } from '../../services/evidence.service';
 
@@ -88,7 +88,7 @@ import { EvidenceService } from '../../services/evidence.service';
                                             </div>
 
                                             <div class="ag-theme-alpine subitem-grid">
-                                                <ag-grid-angular
+                                                <ag-grid-angular #subitemGrid
                                                     [rowData]="getSubitemRows(subitemDef.fieldName)"
                                                     [columnDefs]="getSubitemColumnDefs(subitemDef)"
                                                     [defaultColDef]="{ sortable: true, filter: true, resizable: true }"
@@ -794,6 +794,7 @@ export class RecordEditorDialogComponent implements OnInit {
     @ViewChild('cancelButton') cancelButton!: ElementRef;
     @ViewChild('saveButton') saveButton!: ElementRef;
     @ViewChild('tagInput') tagInput!: ElementRef;
+    @ViewChild('subitemGrid') subitemGrid!: AgGridAngular;
 
     recordForm: FormGroup;
     formHtml: SafeHtml;
@@ -1628,7 +1629,7 @@ export class RecordEditorDialogComponent implements OnInit {
 
                 return container;
             }
-        } as any); // Cast to any to avoid TypeScript error
+        } as any);
 
         return columnDefs;
     }
@@ -1671,7 +1672,7 @@ export class RecordEditorDialogComponent implements OnInit {
         const dialogConfig = {
             data: {
                 subitemDefinition: subitemDef,
-                record: record,
+                record: { ...record }, // Create a copy of the record to prevent direct mutation
                 parentRecordId: this.data.record?.id || 'temp',
                 mode: 'edit'
             },
@@ -1690,9 +1691,19 @@ export class RecordEditorDialogComponent implements OnInit {
                 // Find and replace the updated record
                 const index = this.subitems[subitemDef.fieldName].findIndex(item => item.id === result.id);
                 if (index !== -1) {
+                    // Update the record
                     this.subitems[subitemDef.fieldName][index] = result;
+                    // Create a new array reference to trigger change detection
+                    this.subitems[subitemDef.fieldName] = [...this.subitems[subitemDef.fieldName]];
                     // Process calculated fields
                     this.processCalculatedFields(subitemDef);
+
+                    // Force grid refresh
+                    const gridApi = this.subitemGrid?.api;
+                    if (gridApi) {
+                        gridApi.setRowData(this.subitems[subitemDef.fieldName]);
+                        gridApi.refreshCells({ force: true });
+                    }
                 }
             }
         });
