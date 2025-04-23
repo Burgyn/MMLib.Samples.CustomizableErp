@@ -95,6 +95,8 @@ interface MenuCategory extends Category {
             color: var(--text-color);
             border-radius: 4px;
             transition: background-color 0.2s, color 0.3s ease;
+            position: relative;
+            height: 36px;
 
             &:hover {
                 background-color: var(--light-color);
@@ -102,6 +104,11 @@ interface MenuCategory extends Category {
 
             .category-actions {
                 display: none;
+                position: absolute;
+                right: 0.5rem;
+                top: 50%;
+                transform: translateY(-50%);
+                background-color: inherit;
                 margin-left: auto;
             }
 
@@ -109,10 +116,16 @@ interface MenuCategory extends Category {
                 display: flex;
                 gap: 0.25rem;
             }
-        }
 
-        .expand-icon {
-            margin-left: auto;
+            .d-flex {
+                width: 100%;
+                overflow: hidden;
+            }
+
+            .expand-icon {
+                margin-left: auto;
+                margin-right: 2rem;
+            }
         }
 
         .category-items {
