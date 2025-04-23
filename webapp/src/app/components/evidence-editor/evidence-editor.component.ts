@@ -1591,7 +1591,7 @@ body {
                 'Authorization': `Bearer ${this.openaiApiKey}`
             },
             body: JSON.stringify({
-                model: 'gpt-4-turbo-preview', // Using GPT-4 for better results
+                model: 'gpt-4.1-nano',
                 messages: [
                     {
                         role: 'system',
@@ -1602,7 +1602,7 @@ body {
                         content: userPrompt
                     }
                 ],
-                temperature: 0.7
+                temperature: 1
             })
         });
 
