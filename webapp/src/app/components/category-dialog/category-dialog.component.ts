@@ -117,6 +117,7 @@ export class CategoryDialogComponent {
         id: '',
         name: '',
         icon: 'bi-folder',
+        order: 0,
         createdAt: new Date(),
         updatedAt: new Date()
     };

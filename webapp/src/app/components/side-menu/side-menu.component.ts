@@ -1,4 +1,5 @@
 import { Category, Evidence } from '../../models/evidence.model';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Router, RouterModule } from '@angular/router';
@@ -16,7 +17,7 @@ interface MenuCategory extends Category {
 @Component({
     selector: 'app-side-menu',
     standalone: true,
-    imports: [CommonModule, RouterModule, MatDialogModule],
+    imports: [CommonModule, RouterModule, MatDialogModule, DragDropModule],
     template: `
         <div class="side-menu">
             <div class="menu-header">
@@ -28,11 +29,11 @@ interface MenuCategory extends Category {
                 </button>
             </div>
 
-            <div class="menu-categories">
-                <div *ngFor="let category of categories" class="menu-category">
+            <div class="menu-categories" cdkDropList (cdkDropListDropped)="onCategoryDrop($event)">
+                <div *ngFor="let category of categories" class="menu-category" cdkDrag>
                     <div class="category-header">
                         <div class="d-flex align-items-center flex-grow-1" (click)="toggleCategory(category)">
-                            <i class="bi" [class]="category.icon || 'bi-folder'"></i>
+                            <i class="bi drag-handle" [class]="category.icon || 'bi-folder'"></i>
                             <span class="ms-2">{{ category.name }}</span>
                             <i class="bi expand-icon"
                                [class.bi-chevron-down]="category.isExpanded"
@@ -47,11 +48,12 @@ interface MenuCategory extends Category {
                             </button>
                         </div>
                     </div>
-                    <div class="category-items" *ngIf="category.isExpanded">
+                    <div class="category-items" *ngIf="category.isExpanded" cdkDropList (cdkDropListDropped)="onEvidenceDrop($event, category)">
                         <a *ngFor="let evidence of category.evidences"
                            [routerLink]="['/evidence', evidence.id]"
                            routerLinkActive="active"
                            class="menu-item"
+                           cdkDrag
                            (click)="closeMenu()">
                             <i class="bi" [class]="evidence.icon || 'bi-table'"></i>
                             <span class="ms-2">{{ evidence.name }}</span>
@@ -152,6 +154,34 @@ interface MenuCategory extends Category {
             }
         }
 
+        .drag-handle {
+            cursor: move;
+        }
+
+        .cdk-drag-preview {
+            box-sizing: border-box;
+            border-radius: 4px;
+            box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2),
+                        0 8px 10px 1px rgba(0, 0, 0, 0.14),
+                        0 3px 14px 2px rgba(0, 0, 0, 0.12);
+        }
+
+        .cdk-drag-placeholder {
+            opacity: 0;
+        }
+
+        .cdk-drag-animating {
+            transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+        }
+
+        .menu-categories.cdk-drop-list-dragging .menu-category:not(.cdk-drag-placeholder) {
+            transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+        }
+
+        .category-items.cdk-drop-list-dragging .menu-item:not(.cdk-drag-placeholder) {
+            transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+        }
+
         @media (max-width: 768px) {
             .side-menu {
                 width: 100%;
@@ -196,12 +226,6 @@ export class SideMenuComponent implements OnInit, OnDestroy {
         this.subscriptions.unsubscribe();
     }
 
-    closeMenu(): void {
-        // This will be handled by the parent component
-        const event = new CustomEvent('closeSidebar');
-        window.dispatchEvent(event);
-    }
-
     private loadCategories(): void {
         this.evidenceService.getAllCategories().subscribe(categories => {
             this.categories = categories.map(c => ({
@@ -224,12 +248,28 @@ export class SideMenuComponent implements OnInit, OnDestroy {
             });
     }
 
-    toggleCategory(category: MenuCategory): void {
-        category.isExpanded = !category.isExpanded;
+    onCategoryDrop(event: CdkDragDrop<MenuCategory[]>): void {
+        moveItemInArray(this.categories, event.previousIndex, event.currentIndex);
+
+        // Update order property for all categories
+        this.categories.forEach((category, index) => {
+            category.order = index;
+            this.evidenceService.saveCategory(category).subscribe();
+        });
     }
 
-    createNewEvidence(): void {
-        this.router.navigate(['/evidence/new']);
+    onEvidenceDrop(event: CdkDragDrop<Evidence[]>, category: MenuCategory): void {
+        moveItemInArray(category.evidences, event.previousIndex, event.currentIndex);
+
+        // Update order property for all evidences in the category
+        category.evidences.forEach((evidence, index) => {
+            evidence.order = index;
+            this.evidenceService.saveEvidence(evidence).subscribe();
+        });
+    }
+
+    toggleCategory(category: MenuCategory): void {
+        category.isExpanded = !category.isExpanded;
     }
 
     createNewCategory(): void {
@@ -240,6 +280,8 @@ export class SideMenuComponent implements OnInit, OnDestroy {
 
         dialogRef.afterClosed().subscribe(result => {
             if (result) {
+                // Set the order to be the last in the list
+                result.order = this.categories.length;
                 this.evidenceService.saveCategory(result).subscribe(() => {
                     this.loadCategories();
                 });
@@ -268,5 +310,15 @@ export class SideMenuComponent implements OnInit, OnDestroy {
                 this.loadCategories();
             });
         }
+    }
+
+    createNewEvidence(): void {
+        this.router.navigate(['/evidence/new']);
+    }
+
+    closeMenu(): void {
+        // This will be handled by the parent component
+        const event = new CustomEvent('closeSidebar');
+        window.dispatchEvent(event);
     }
 }
