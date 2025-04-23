@@ -125,6 +125,8 @@ import { EvidenceService } from '../../services/evidence.service';
         :host {
             display: block;
             font-family: Ubuntu, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Noto Sans, Liberation Sans, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", Segoe UI Symbol, "Noto Color Emoji";
+            height: 85vh;
+            overflow: hidden;
         }
         /* Ensure child elements inherit the host font */
         .record-editor-dialog,
@@ -140,21 +142,24 @@ import { EvidenceService } from '../../services/evidence.service';
             min-width: auto;
             width: 100%;
             max-width: 100%;
-            max-height: 100vh;
+            height: 100%;
             background: var(--component-bg);
             border-radius: 0.375rem;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            height: 100%;
             border: 1px solid var(--border-color);
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            position: relative;
         }
         .dialog-header {
             padding: 1rem;
             background: var(--component-bg);
             flex-shrink: 0;
             border-bottom: 1px solid var(--border-color);
+            z-index: 1;
+            position: sticky;
+            top: 0;
         }
         .dialog-header h2 {
             color: var(--text-color);
@@ -346,10 +351,11 @@ import { EvidenceService } from '../../services/evidence.service';
         /* Content background and cards */
         .content-background {
             background-color: var(--app-bg);
-            flex-grow: 1;
+            flex: 1;
             overflow-y: auto;
             padding: 1.5rem;
             color: var(--text-color);
+            min-height: 0; /* This is important for flex child scrolling */
         }
 
         .content-card {
@@ -443,6 +449,9 @@ import { EvidenceService } from '../../services/evidence.service';
             display: flex;
             align-items: center;
             flex-shrink: 0;
+            position: sticky;
+            bottom: 0;
+            z-index: 1;
         }
         .dialog-actions .btn {
             font-size: 0.875rem;
