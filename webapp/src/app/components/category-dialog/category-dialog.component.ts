@@ -29,19 +29,18 @@ import { MatSelectModule } from '@angular/material/select';
                     <input matInput [(ngModel)]="category.name" required>
                 </mat-form-field>
                 <mat-form-field class="w-100">
-                    <mat-label>Ikona</mat-label>
-                    <mat-select [(ngModel)]="category.icon">
-                        <mat-option value="bi-folder">Súbor</mat-option>
-                        <mat-option value="bi-folder2">Súbor 2</mat-option>
-                        <mat-option value="bi-folder-fill">Súbor (vyplnený)</mat-option>
-                        <mat-option value="bi-folder2-open">Otvorený súbor</mat-option>
-                        <mat-option value="bi-folder-symlink">Symbolický odkaz</mat-option>
-                        <mat-option value="bi-folder-check">Súbor s odškrtnutím</mat-option>
-                        <mat-option value="bi-folder-x">Súbor s X</mat-option>
-                        <mat-option value="bi-folder-plus">Súbor s plusom</mat-option>
-                        <mat-option value="bi-folder-minus">Súbor s mínusom</mat-option>
-                    </mat-select>
+                    <mat-label>Ikona (názov Bootstrap ikony)</mat-label>
+                    <input matInput [(ngModel)]="category.icon" placeholder="napr. bi-folder">
+                    <mat-hint>
+                        <a href="https://icons.getbootstrap.com/" target="_blank" class="icon-docs-link">
+                            Zoznam dostupných ikon
+                        </a>
+                    </mat-hint>
                 </mat-form-field>
+                <div class="icon-preview" *ngIf="category.icon">
+                    <i class="bi" [class]="category.icon"></i>
+                    <span class="ms-2">{{ category.name }}</span>
+                </div>
             </mat-dialog-content>
             <mat-dialog-actions align="end">
                 <button mat-button (click)="onCancel()">Zrušiť</button>
@@ -62,6 +61,24 @@ import { MatSelectModule } from '@angular/material/select';
 
         mat-form-field {
             margin-bottom: 1rem;
+        }
+
+        .icon-preview {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            background-color: var(--light-color);
+            border-radius: 4px;
+        }
+
+        .icon-docs-link {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .icon-docs-link:hover {
+            text-decoration: underline;
         }
 
         mat-dialog-actions {
