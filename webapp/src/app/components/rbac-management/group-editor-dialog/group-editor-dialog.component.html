@@ -14,28 +14,26 @@
 
   <mat-divider></mat-divider>
 
-  <h3 class="members-title">Členovia skupiny</h3>
-
    <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Používatelia</mat-label>
-    <!-- Add multiple attribute for multi-select -->
-    <mat-select formControlName="memberUserIds" multiple>
-      <mat-select-trigger>
-         {{ groupForm.get('memberUserIds')?.value?.length || 0 }} používateľov vybraných
+    <mat-label>Členovia (Používatelia aj Skupiny)</mat-label>
+    <mat-select formControlName="memberIds" multiple #memberSelect>
+       <mat-select-trigger>
+         {{ selectedMembersCount }} členov vybraných
       </mat-select-trigger>
-      <mat-option *ngFor="let user of allUsers$ | async" [value]="user.id">{{ user.name }} ({{ user.email }})</mat-option>
-    </mat-select>
-  </mat-form-field>
+      <!-- Search input -->
+      <mat-option>
+        <ngx-mat-select-search [formControl]="memberFilterCtrl" placeholderLabel="Hľadať členov..."></ngx-mat-select-search>
+      </mat-option>
 
-   <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Podskupiny</mat-label>
-    <mat-select formControlName="memberGroupIds" multiple>
-         <mat-select-trigger>
-            {{ groupForm.get('memberGroupIds')?.value?.length || 0 }} skupín vybraných
-        </mat-select-trigger>
-      <mat-option *ngFor="let group of allOtherGroups$ | async" [value]="group.id">{{ group.name }}</mat-option>
+      <mat-option *ngFor="let member of filteredMembers | async" [value]="member.id">
+         <mat-icon class="member-icon">{{ member.type === 'user' ? 'person' : 'group' }}</mat-icon>
+         <span class="member-name">{{ member.name }}</span>
+         <span *ngIf="member.type === 'user'" class="member-detail"> ({{ member.email }})</span>
+      </mat-option>
+       <mat-option *ngIf="(filteredMembers | async)?.length === 0 && memberFilterCtrl.value" disabled>
+            Žiadni členovia nenájdení pre "{{memberFilterCtrl.value}}".
+        </mat-option>
     </mat-select>
-    <mat-hint *ngIf="isEditMode">Nemôžete pridať skupinu samu do seba.</mat-hint>
   </mat-form-field>
 
 </mat-dialog-content>
