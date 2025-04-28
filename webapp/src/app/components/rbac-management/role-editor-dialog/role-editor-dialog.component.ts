@@ -369,6 +369,56 @@ export class RoleEditorDialogComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  // --- NEW: Method to determine the permission status for a tree node ---
+  getNodePermissionStatus(node: FlatActionNode): 'all' | 'read-only' | 'none' | 'mixed' {
+    if (!node) return 'none';
+
+    // Find all descendant leaf actions for the given node
+    const nodeIdPrefix = node.id + '/';
+    const descendantLeafActions = this.allActions.filter(action =>
+        action.id === node.id || action.id.startsWith(nodeIdPrefix)
+        // We need *all* leaves, not just direct children, so the simple startsWith is correct here
+    );
+
+    if (descendantLeafActions.length === 0) {
+        // If a category node truly has no actions under it at all
+        return 'none'; // Or maybe a different state? For now, treat as none.
+    }
+
+    const selectedDescendantCount = descendantLeafActions.filter(action =>
+        this.selectedActionIds.has(action.id)
+    ).length;
+
+    if (selectedDescendantCount === 0) {
+        return 'none';
+    }
+
+    if (selectedDescendantCount === descendantLeafActions.length) {
+        return 'all';
+    }
+
+    // Check for read-only: only actions ending in /read are selected
+    const allSelectedAreReadOnly = descendantLeafActions.every(action => {
+        const isSelected = this.selectedActionIds.has(action.id);
+        // If it's selected, it must end with /read. If not selected, we don't care.
+        return !isSelected || action.id.toLowerCase().endsWith('/read');
+    });
+
+    if (allSelectedAreReadOnly && selectedDescendantCount > 0) {
+         // Verify at least one actual /read action exists and is selected,
+         // otherwise, a node with only non-read actions where none are selected would incorrectly show read-only.
+        const readActionsExistAndSelected = descendantLeafActions.some(action =>
+            action.id.toLowerCase().endsWith('/read') && this.selectedActionIds.has(action.id)
+        );
+        if (readActionsExistAndSelected) {
+           return 'read-only';
+        }
+    }
+
+    // If none of the above, it's mixed permissions
+    return 'mixed';
+  }
+
   // --- Dialog Actions ---
 
   onCancel(): void {

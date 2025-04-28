@@ -29,6 +29,13 @@
               </mat-icon>
           </button>
           <mat-icon class="folder-icon">{{treeControl.isExpanded(node) ? 'folder_open' : 'folder'}}</mat-icon>
+           <!-- Permission Status Icon -->
+            <ng-container [ngSwitch]="getNodePermissionStatus(node)">
+                <mat-icon *ngSwitchCase="'all'" class="status-icon status-all" matTooltip="Plné práva">check_circle</mat-icon>
+                <mat-icon *ngSwitchCase="'read-only'" class="status-icon status-readonly" matTooltip="Len čítanie">visibility</mat-icon>
+                <mat-icon *ngSwitchCase="'none'" class="status-icon status-none" matTooltip="Zakázané">block</mat-icon>
+                <mat-icon *ngSwitchCase="'mixed'" class="status-icon status-mixed" matTooltip="Vlastné nastavenia">settings_suggest</mat-icon>
+            </ng-container>
           <span class="node-name">{{node.name}}</span>
         </mat-tree-node>
 
@@ -36,9 +43,14 @@
         <mat-tree-node *matTreeNodeDef="let node; when: !hasChild" matTreeNodePadding
                       (click)="selectNode(node)"
                       [class.selected-node]="selectedNode?.id === node.id">
-            <!-- No toggle button for non-expandable nodes -->
-            <button mat-icon-button disabled></button> <!-- Placeholder for alignment -->
-            <mat-icon class="leaf-category-icon">article</mat-icon> <!-- Different icon -->
+            <mat-icon class="leaf-category-icon">article</mat-icon>
+             <!-- Permission Status Icon -->
+             <ng-container [ngSwitch]="getNodePermissionStatus(node)">
+                <mat-icon *ngSwitchCase="'all'" class="status-icon status-all" matTooltip="Plné práva">check_circle</mat-icon>
+                <mat-icon *ngSwitchCase="'read-only'" class="status-icon status-readonly" matTooltip="Len čítanie">visibility</mat-icon>
+                <mat-icon *ngSwitchCase="'none'" class="status-icon status-none" matTooltip="Zakázané">block</mat-icon>
+                <mat-icon *ngSwitchCase="'mixed'" class="status-icon status-mixed" matTooltip="Vlastné nastavenia">settings_suggest</mat-icon>
+            </ng-container>
             <span class="node-name">{{node.name}}</span>
         </mat-tree-node>
     </mat-tree>

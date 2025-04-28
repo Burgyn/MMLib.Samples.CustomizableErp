@@ -24,6 +24,15 @@
   cursor: pointer;
   border-radius: 4px;
   margin-bottom: 2px;
+  line-height: 36px; /* Set line-height equal to min-height */
+}
+
+.mat-mdc-tree-node button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px; /* Match line-height */
+    line-height: 36px;
 }
 
 .mat-mdc-tree-node:hover {
@@ -37,11 +46,16 @@
 
 .node-name {
     margin-left: 4px;
+    line-height: 36px; /* Match parent line-height */
 }
 
-.folder-icon, .leaf-icon {
-    margin-left: 4px;
+.folder-icon, .leaf-category-icon, .status-icon {
+    margin-left: 4px; /* status-icon needs left margin reset below */
     color: grey;
+    line-height: 36px; /* Match parent line-height */
+    height: 36px; /* Ensure icon container matches height */
+    display: inline-flex !important; /* Force display */
+    align-items: center; /* Center icon within its own box */
 }
 
 .section-divider {
@@ -147,4 +161,29 @@
 /* Indentation */
 .mat-mdc-tree-node .mat-icon-button[disabled] {
     width: 40px; /* Ensure indentation consistency */
+}
+
+/* Status Icon Styles - override general icon styles */
+.status-icon {
+    margin-left: 8px;
+    margin-right: 4px;
+    font-size: 18px;
+    color: inherit; /* Reset color, let specific classes handle it */
+    /* Inherits line-height, height, display, align-items */
+}
+
+.status-all {
+    color: green;
+}
+
+.status-readonly {
+    color: orange;
+}
+
+.status-none {
+    color: red;
+}
+
+.status-mixed {
+    color: dodgerblue;
 }
