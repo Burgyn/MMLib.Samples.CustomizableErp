@@ -1,0 +1,50 @@
+<h2 mat-dialog-title>{{ isEditMode ? 'Upraviť rolu' : 'Nová rola' }}</h2>
+
+<mat-dialog-content [formGroup]="roleForm">
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Názov roly</mat-label>
+    <input matInput formControlName="name" required>
+    <mat-error *ngIf="roleForm.get('name')?.hasError('required')">
+      Názov je povinný.
+    </mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Popis</mat-label>
+    <textarea matInput formControlName="description"></textarea>
+  </mat-form-field>
+
+  <h3 class="permissions-title">Povolenia</h3>
+  <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" class="action-tree">
+    <!-- Leaf Node -->
+    <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
+        <button mat-icon-button disabled></button> <!-- Placeholder for alignment -->
+        <mat-checkbox class="tree-checkbox"
+                      [checked]="selectedActionIds.has(node.id)"
+                      (change)="toggleLeafNodeSelection(node, $event.checked)">
+        </mat-checkbox>
+        <span class="node-name">{{node.name}}</span>
+        <span class="node-description" *ngIf="node.description"> - {{node.description}}</span>
+    </mat-tree-node>
+
+    <!-- Internal Node -->
+    <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding>
+      <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'toggle ' + node.name">
+        <mat-icon class="mat-icon-rtl-mirror">
+          {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+        </mat-icon>
+      </button>
+       <mat-checkbox class="tree-checkbox"
+                     [checked]="descendantsAllSelected(node)"
+                     [indeterminate]="descendantsPartiallySelected(node)"
+                     (change)="toggleNodeSelection(node, $event.checked)">
+      </mat-checkbox>
+       <span class="node-name">{{node.name}}</span>
+    </mat-tree-node>
+  </mat-tree>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Zrušiť</button>
+  <button mat-flat-button color="primary" (click)="onSave()" [disabled]="!roleForm.valid">Uložiť</button>
+</mat-dialog-actions>

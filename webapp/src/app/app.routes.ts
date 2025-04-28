@@ -7,5 +7,9 @@ export const routes: Routes = [
     { path: 'evidence', component: EvidenceViewComponent },
     { path: 'evidence/new', component: EvidenceEditorComponent },
     { path: 'evidence/:id', component: EvidenceViewComponent },
-    { path: 'evidence/:id/edit', component: EvidenceEditorComponent }
+    { path: 'evidence/:id/edit', component: EvidenceEditorComponent },
+    {
+        path: 'settings/rbac',
+        loadChildren: () => import('./components/rbac-management/rbac-management.module').then(m => m.RbacManagementModule)
+    }
 ];

@@ -59,7 +59,7 @@ import { ThemeService } from './services/theme.service';
                     <button class="btn btn-link">
                         <i class="bi bi-question-circle"></i>
                     </button>
-                    <button class="btn btn-link">
+                    <button class="btn btn-link" routerLink="/settings/rbac">
                         <i class="bi bi-gear"></i>
                     </button>
                 </div>

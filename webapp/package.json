@@ -28,6 +28,7 @@
     "grapesjs-blocks-basic": "^1.0.2",
     "grapesjs-plugin-forms": "^2.0.6",
     "grapesjs-preset-webpage": "^1.0.3",
+    "idb": "^8.0.2",
     "localforage": "^1.10.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

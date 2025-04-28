@@ -1,0 +1,32 @@
+.roles-table {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* Make action buttons less prominent until hover */
+.mat-mdc-icon-button {
+  opacity: 0.7;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.mat-mdc-icon-button:hover {
+  opacity: 1;
+}
+
+/* Ensure header alignment */
+.mat-mdc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 8px; /* Adjust padding if needed */
+}
+
+.new-role-button {
+  margin-left: auto; /* Push the button to the right */
+}
+
+/* Style system role icon/text */
+.mat-mdc-cell .mat-icon {
+  vertical-align: middle;
+  margin-right: 4px;
+}

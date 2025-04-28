@@ -27,6 +27,9 @@ interface MenuCategory extends Category {
                 <button class="btn btn-light w-100 text-start" (click)="createNewEvidence()">
                     <i class="bi bi-plus-lg"></i> Nová evidencia
                 </button>
+                <button class="btn btn-light w-100 text-start mt-2" routerLink="/settings/rbac" (click)="closeMenu()">
+                    <i class="bi bi-gear"></i> Nastavenia
+                </button>
             </div>
 
             <div class="menu-categories" cdkDropList (cdkDropListDropped)="onCategoryDrop($event)">
