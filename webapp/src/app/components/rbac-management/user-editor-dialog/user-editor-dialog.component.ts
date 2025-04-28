@@ -5,12 +5,14 @@ import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule, MatDialog } from '@angu
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSelectModule } from '@angular/material/select'; // For Role and Tenant selection
+import { MatSelectModule, MatSelect } from '@angular/material/select'; // For Role and Tenant selection
 import { MatListModule } from '@angular/material/list'; // For displaying assigned roles
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle'; // For 'own' scope toggle
+import { MatExpansionModule } from '@angular/material/expansion'; // Import Expansion Panel Module
+import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
 
 import { RbacService, ScopeType } from '../../../services/rbac.service';
 import { Role } from '../../../models/rbac/role.model';
@@ -38,7 +40,9 @@ import { RoleEditorDialogComponent } from '../role-editor-dialog/role-editor-dia
     MatIconModule,
     MatDividerModule,
     MatCheckboxModule,
-    MatSlideToggleModule // Add MatSlideToggleModule
+    MatSlideToggleModule,
+    MatExpansionModule,
+    NgxMatSelectSearchModule
   ],
   templateUrl: './user-editor-dialog.component.html',
   styleUrl: './user-editor-dialog.component.css'
@@ -126,6 +130,16 @@ export class UserEditorDialogComponent implements OnInit, OnDestroy {
     this.roleChangeSubscriptions.forEach(sub => sub.unsubscribe());
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  // --- NEW: Helper to get Role Name for Panel Header ---
+  getRoleNameForAssignment(index: number): string {
+      const roleId = this.roleAssignmentsFormArray.at(index)?.get('roleId')?.value;
+      if (!roleId) {
+          return 'Nové priradenie roly'; // Placeholder for new/empty assignments
+      }
+      const role = this.localRoles.find(r => r.id === roleId);
+      return role?.name ?? 'Neznáma rola';
   }
 
   get roleAssignmentsFormArray(): FormArray {
