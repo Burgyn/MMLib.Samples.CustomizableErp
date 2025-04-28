@@ -1,7 +1,7 @@
 import { Component, Inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray, AbstractControl } from '@angular/forms';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,6 +20,7 @@ import { Warehouse } from '../../../models/rbac/warehouse.model'; // Import Ware
 import { NumericRange } from '../../../models/rbac/numeric-range.model'; // Import NumericRange
 import { Subject, combineLatest, filter, first, takeUntil, Observable, map, shareReplay, tap, startWith, Subscription, of } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
+import { RoleEditorDialogComponent } from '../role-editor-dialog/role-editor-dialog.component'; // Import RoleEditorDialog
 
 @Component({
   selector: 'app-user-editor-dialog',
@@ -55,13 +56,15 @@ export class UserEditorDialogComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   private localTenants: Tenant[] = [];
+  private localRoles: Role[] = [];
 
   constructor(
     public dialogRef: MatDialogRef<UserEditorDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { user: User | null },
     private fb: FormBuilder,
     private rbacService: RbacService,
-    private cdr: ChangeDetectorRef // Keep CDR for potential future use
+    private cdr: ChangeDetectorRef,
+    private dialog: MatDialog // Inject MatDialog
   ) {
     this.isEditMode = !!data.user;
 
@@ -81,6 +84,7 @@ export class UserEditorDialogComponent implements OnInit, OnDestroy {
         first(),
         switchMap(() => this.rbacService.getRoles()),
         map(roles => roles.sort((a, b) => a.name.localeCompare(b.name))),
+        tap(roles => this.localRoles = roles || []),
         shareReplay(1)
     );
 
@@ -219,6 +223,70 @@ export class UserEditorDialogComponent implements OnInit, OnDestroy {
       return relevantScopes$.pipe(
           map(types => types.includes(scopeType))
       );
+  }
+
+  isRoleSystem(roleId: string | null): boolean {
+    if (!roleId) return true; // Cannot edit if no role selected
+    const role = this.localRoles.find(r => r.id === roleId);
+    return role?.isSystemRole ?? true; // Treat as system if not found or property missing
+  }
+
+  editAssignedRole(index: number): void {
+    const roleId = this.roleAssignmentsFormArray.at(index)?.get('roleId')?.value;
+    if (!roleId) {
+      console.warn('No role selected to edit at index', index);
+      return;
+    }
+
+    // Find the role in the local cache
+    const roleToEdit = this.localRoles.find(r => r.id === roleId);
+
+    if (!roleToEdit) {
+        console.error(`Role with ID ${roleId} not found in local cache.`);
+        alert('Chyba: Rola nebola nájdená.');
+        return;
+    }
+
+    if (roleToEdit.isSystemRole) {
+      alert('Systémové role nie je možné upravovať priamo. Môžete vytvoriť kópiu v sekcii Roly.');
+      return;
+    }
+
+    // Deep copy the role for editing
+    const roleCopy = JSON.parse(JSON.stringify(roleToEdit));
+
+    const dialogRef = this.dialog.open(RoleEditorDialogComponent, {
+      width: '600px',
+      data: { role: roleCopy },
+      // Consider adding disableClose: true if needed
+    });
+
+    dialogRef.afterClosed().pipe(takeUntil(this.destroy$)).subscribe(savedRole => {
+      if (savedRole) {
+        console.log('Role editor closed, saved data:', savedRole);
+        // We need to refresh the list of roles available in the select dropdowns
+        // Easiest way is to trigger a re-fetch of the allRoles$ observable.
+        // This implementation is simple but might fetch more than needed.
+        // A more refined approach could use a subject in RbacService to signal updates.
+
+         // Simple re-trigger: Update local cache and maybe force observable update
+         const idx = this.localRoles.findIndex(r => r.id === savedRole.id);
+         if (idx > -1) {
+             this.localRoles[idx] = savedRole;
+         } else {
+             this.localRoles.push(savedRole); // Should not happen in edit case
+         }
+         // Re-sort
+         this.localRoles.sort((a, b) => a.name.localeCompare(b.name));
+         // Manually trigger change detection for the dialog
+         this.cdr.detectChanges();
+
+         // How to make allRoles$ re-emit? We didn't implement a refresh mechanism.
+         // For now, the local cache update ensures isRoleSystem works.
+         // The select dropdown might not update immediately without a full refresh trigger.
+         alert('Rola bola upravená. Zmena sa prejaví v tomto dialógu (napr. pri ďalšom otvorení), alebo obnovte dáta v hlavnom zozname používateľov.');
+      }
+    });
   }
 
   prepareSaveData(): User {

@@ -15,33 +15,81 @@
   </mat-form-field>
 
   <h3 class="permissions-title">Povolenia</h3>
-  <mat-tree [dataSource]="dataSource" [treeControl]="treeControl" class="action-tree">
-    <!-- Leaf Node -->
-    <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
-        <button mat-icon-button disabled></button> <!-- Placeholder for alignment -->
-        <mat-checkbox class="tree-checkbox"
-                      [checked]="selectedActionIds.has(node.id)"
-                      (change)="toggleLeafNodeSelection(node, $event.checked)">
-        </mat-checkbox>
-        <span class="node-name">{{node.name}}</span>
-        <span class="node-description" *ngIf="node.description"> - {{node.description}}</span>
-    </mat-tree-node>
 
-    <!-- Internal Node -->
-    <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding>
-      <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'toggle ' + node.name">
-        <mat-icon class="mat-icon-rtl-mirror">
-          {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-        </mat-icon>
-      </button>
-       <mat-checkbox class="tree-checkbox"
-                     [checked]="descendantsAllSelected(node)"
-                     [indeterminate]="descendantsPartiallySelected(node)"
-                     (change)="toggleNodeSelection(node, $event.checked)">
-      </mat-checkbox>
-       <span class="node-name">{{node.name}}</span>
-    </mat-tree-node>
-  </mat-tree>
+  <!-- Action Tree for Navigation -->
+  <div class="tree-container">
+    <mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
+        <!-- Node with children (expandable category) -->
+        <mat-tree-node *matTreeNodeDef="let node; when: hasChild" matTreeNodePadding
+                    (click)="selectNode(node)"
+                    [class.selected-node]="selectedNode?.id === node.id">
+          <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'toggle ' + node.name">
+              <mat-icon class="mat-icon-rtl-mirror">
+              {{treeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
+              </mat-icon>
+          </button>
+          <mat-icon class="folder-icon">{{treeControl.isExpanded(node) ? 'folder_open' : 'folder'}}</mat-icon>
+          <span class="node-name">{{node.name}}</span>
+        </mat-tree-node>
+
+        <!-- Node without children (final category) -->
+        <mat-tree-node *matTreeNodeDef="let node; when: !hasChild" matTreeNodePadding
+                      (click)="selectNode(node)"
+                      [class.selected-node]="selectedNode?.id === node.id">
+            <!-- No toggle button for non-expandable nodes -->
+            <button mat-icon-button disabled></button> <!-- Placeholder for alignment -->
+            <mat-icon class="leaf-category-icon">article</mat-icon> <!-- Different icon -->
+            <span class="node-name">{{node.name}}</span>
+        </mat-tree-node>
+    </mat-tree>
+  </div>
+
+  <mat-divider class="section-divider"></mat-divider>
+
+  <!-- Action Panel (Below Tree) -->
+  <div class="action-panel-below">
+      <ng-container *ngIf="selectedNode; else noNodeSelected">
+          <h4>Nastavenie práv pre: <span class="selected-node-name">{{ selectedNode.name }}</span></h4>
+
+          <!-- Preset Buttons -->
+          <mat-button-toggle-group class="preset-buttons" aria-label="Nastavenie práv">
+               <mat-button-toggle value="all" (click)="applyPreset('all')">
+                    <mat-icon>done_all</mat-icon> Plné práva
+                </mat-button-toggle>
+                <mat-button-toggle value="read-only" (click)="applyPreset('read-only')">
+                    <mat-icon>visibility</mat-icon> Len čítanie
+                </mat-button-toggle>
+                <mat-button-toggle value="none" (click)="applyPreset('none')">
+                     <mat-icon>block</mat-icon> Zakázané
+                </mat-button-toggle>
+          </mat-button-toggle-group>
+
+          <mat-divider class="action-divider"></mat-divider>
+
+          <!-- Action Checkboxes -->
+          <div class="action-checkboxes">
+              <div *ngIf="leafActionsForSelectedNode.length === 0" class="no-actions-message">
+                  Pre túto úroveň nie sú definované žiadne priame akcie.
+              </div>
+              <mat-checkbox *ngFor="let action of leafActionsForSelectedNode"
+                          class="action-checkbox"
+                          [checked]="isActionSelected(action.id)"
+                          (change)="toggleActionSelection(action.id, $event.checked)"
+                          [matTooltip]="action.description">
+                  <!-- Display Description, fallback to last part of ID -->
+                  {{ action.description || action.id.split('/').pop() }}
+              </mat-checkbox>
+          </div>
+      </ng-container>
+
+      <ng-template #noNodeSelected>
+          <div class="select-node-prompt">
+              <mat-icon>touch_app</mat-icon>
+              <span>Vyberte úroveň v strome vyššie pre nastavenie práv.</span>
+          </div>
+      </ng-template>
+  </div>
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">

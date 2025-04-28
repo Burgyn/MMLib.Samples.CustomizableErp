@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms'; // For forms
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog'; // For Dialog
@@ -8,11 +8,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTreeModule, MatTreeFlatDataSource, MatTreeFlattener } from '@angular/material/tree'; // For Tree
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox'; // For Checkbox in Tree
+import { MatButtonToggleModule } from '@angular/material/button-toggle'; // For preset buttons
+import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip'; // Import MatTooltipModule
 import { FlatTreeControl } from '@angular/cdk/tree'; // For Tree Control
 
 import { RbacService } from '../../../services/rbac.service';
 import { Role } from '../../../models/rbac/role.model';
 import { Action } from '../../../models/rbac/action.model';
+import { Subject, takeUntil } from 'rxjs';
 
 /** Node structure for action tree */
 interface ActionNode {
@@ -20,6 +24,7 @@ interface ActionNode {
   name: string;
   description?: string;
   children?: ActionNode[];
+  isLeaf?: boolean;
 }
 
 /** Flat node structure for action tree */
@@ -29,8 +34,8 @@ interface FlatActionNode {
   description?: string;
   level: number;
   expandable: boolean;
+  isLeaf: boolean;
 }
-
 
 @Component({
   selector: 'app-role-editor-dialog',
@@ -45,12 +50,15 @@ interface FlatActionNode {
     MatButtonModule,
     MatTreeModule,
     MatIconModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatButtonToggleModule, // Add toggle buttons
+    MatDividerModule,
+    MatTooltipModule // Add MatTooltipModule here
   ],
   templateUrl: './role-editor-dialog.component.html',
   styleUrl: './role-editor-dialog.component.css'
 })
-export class RoleEditorDialogComponent implements OnInit {
+export class RoleEditorDialogComponent implements OnInit, OnDestroy {
 
   roleForm: FormGroup;
   isEditMode: boolean;
@@ -62,11 +70,18 @@ export class RoleEditorDialogComponent implements OnInit {
   treeFlattener: MatTreeFlattener<ActionNode, FlatActionNode>;
   dataSource: MatTreeFlatDataSource<ActionNode, FlatActionNode>;
 
+  // Selected node for permission panel
+  selectedNode: FlatActionNode | null = null;
+  leafActionsForSelectedNode: Action[] = [];
+
+  private destroy$ = new Subject<void>();
+
   constructor(
     public dialogRef: MatDialogRef<RoleEditorDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { role: Role | null },
     private fb: FormBuilder,
-    private rbacService: RbacService
+    private rbacService: RbacService,
+    private cdr: ChangeDetectorRef
   ) {
     this.isEditMode = !!data.role;
 
@@ -74,11 +89,10 @@ export class RoleEditorDialogComponent implements OnInit {
       id: [data.role?.id || null],
       name: [data.role?.name || '', Validators.required],
       description: [data.role?.description || ''],
-      isSystemRole: [data.role?.isSystemRole || false]
-      // allowedActionIds will be handled separately via the tree
+      isSystemRole: [{ value: data.role?.isSystemRole || false, disabled: true }] // Disable system role editing
     });
 
-    if (this.isEditMode && data.role) {
+    if (this.isEditMode && data.role?.allowedActionIds) {
         data.role.allowedActionIds.forEach(id => this.selectedActionIds.add(id));
     }
 
@@ -95,8 +109,13 @@ export class RoleEditorDialogComponent implements OnInit {
     this.loadActions();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadActions(): void {
-    this.rbacService.getActions().subscribe(actions => {
+    this.rbacService.getActions().pipe(takeUntil(this.destroy$)).subscribe(actions => {
       this.allActions = actions;
       this.dataSource.data = this.buildActionTree(actions);
       this.treeControl.expandAll(); // Expand all nodes initially
@@ -115,7 +134,8 @@ export class RoleEditorDialogComponent implements OnInit {
       name: node.name,
       description: node.description,
       level: level,
-      expandable: !!node.children && node.children.length > 0
+      expandable: !!node.children && node.children.length > 0,
+      isLeaf: !!node.isLeaf // Mark leaf nodes explicitly
     };
   }
 
@@ -123,75 +143,48 @@ export class RoleEditorDialogComponent implements OnInit {
 
   isLeafNode = (_: number, node: FlatActionNode) => !node.expandable;
 
-  // Build hierarchical tree from flat action list
+  // Updated buildActionTree to filter out leaf nodes for the tree display
   buildActionTree(actions: Action[]): ActionNode[] {
     const tree: ActionNode[] = [];
     const map = new Map<string, ActionNode>();
 
-    // Helper to ensure parent nodes exist
-    const ensureNodeExists = (idSegments: string[]): ActionNode => {
-        let currentPath = '';
-        let parentNode: ActionNode | undefined = undefined;
-        for (let i = 0; i < idSegments.length; i++) {
-            currentPath = i === 0 ? idSegments[i] : `${currentPath}/${idSegments[i]}`;
-            if (!map.has(currentPath)) {
-                const newNode: ActionNode = {
-                    id: currentPath,
-                    name: idSegments[i], // Use the segment as name for intermediate nodes
-                    children: []
-                };
-                map.set(currentPath, newNode);
-                if (parentNode && parentNode.children) {
-                    parentNode.children.push(newNode);
-                } else if (i === 0) {
-                    // Check if top-level node already exists (e.g., Kros.Invoicing)
-                    const existingTopNode = tree.find(n => n.id === currentPath);
-                    if (!existingTopNode) {
-                        tree.push(newNode);
-                    } else {
-                         // If it exists, use the existing one as parent for next level
-                         parentNode = existingTopNode;
-                         continue; // Skip setting parentNode again below
-                    }
-                }
-                parentNode = newNode;
-            } else {
-                 parentNode = map.get(currentPath)!;
-            }
-        }
-        return parentNode!;
-    };
-
+    // Process all actions to build the map of potential parents
     actions.forEach(action => {
         const parts = action.id.split('/');
-        const leafName = parts.pop()!; // The last part is the specific action name
-        const parentNode = ensureNodeExists(parts);
-
-        // Create or update the leaf node with full details
-        const leafNode: ActionNode = {
-            id: action.id,
-            name: leafName,
-            description: action.description,
-            children: [] // Leaf nodes don't have children array in this context
-        };
-        map.set(action.id, leafNode);
-        if (parentNode && parentNode.children) {
-           parentNode.children.push(leafNode);
+        parts.pop(); // Ignore the last part (leaf action)
+        let currentPath = '';
+        let parentNode: ActionNode | undefined = undefined;
+        for (let i = 0; i < parts.length; i++) {
+            const segment = parts[i];
+            currentPath = i === 0 ? segment : `${currentPath}/${segment}`;
+            if (!map.has(currentPath)) {
+                const newNode: ActionNode = { id: currentPath, name: segment, children: [] };
+                map.set(currentPath, newNode);
+                if (parentNode?.children) {
+                    // Add to existing parent only if not already present
+                    if (!parentNode.children.some(child => child.id === newNode.id)) {
+                         parentNode.children.push(newNode);
+                    }
+                } else if (i === 0) {
+                     // Add top-level node if not already present in the tree array
+                     if (!tree.some(node => node.id === newNode.id)) {
+                        tree.push(newNode);
+                    }
+                }
+                 parentNode = newNode;
+            } else {
+                parentNode = map.get(currentPath)!;
+            }
         }
-
     });
 
-    // Sort children alphabetically by name
+    // Sort nodes alphabetically
     const sortNodes = (nodes: ActionNode[]) => {
         nodes.sort((a, b) => a.name.localeCompare(b.name));
-        nodes.forEach(node => {
-            if (node.children && node.children.length > 0) {
-                sortNodes(node.children);
-            }
-        });
+        nodes.forEach(node => { if (node.children) { sortNodes(node.children); } });
     };
     sortNodes(tree);
-
+    console.log('Built Tree Structure (categories only):', tree);
     return tree;
   }
 
@@ -282,6 +275,71 @@ export class RoleEditorDialogComponent implements OnInit {
       });
   }
 
+  // --- Node Selection & Permission Panel Logic ---
+
+  selectNode(node: FlatActionNode): void {
+    console.log('Node selected:', node);
+    this.selectedNode = node;
+    this.leafActionsForSelectedNode = this.getLeafActionsForNode(node);
+    this.cdr.detectChanges(); // Update view after selection
+  }
+
+  // Gets the direct leaf actions for a selected category node
+  getLeafActionsForNode(node: FlatActionNode | null): Action[] {
+    if (!node || node.isLeaf) { // We should only select category nodes now
+        console.log('getLeafActionsForNode called with null or leaf node.');
+         return [];
+     }
+
+    const nodeIdPrefix = node.id + '/';
+    const directChildrenActions = this.allActions.filter(action => {
+        if (!action.id.startsWith(nodeIdPrefix)) {
+            return false;
+        }
+        const remainingPath = action.id.substring(nodeIdPrefix.length);
+        // Must not contain any further slashes to be a direct action
+        return !remainingPath.includes('/');
+    });
+    console.log(`Leaf actions for node ${node.id}:`, directChildrenActions);
+    return directChildrenActions.sort((a,b)=> a.id.localeCompare(b.id)); // Sort actions
+  }
+
+  // Check if a specific action (leaf) is selected
+  isActionSelected(actionId: string): boolean {
+      return this.selectedActionIds.has(actionId);
+  }
+
+  // Toggle selection for a specific action (leaf)
+  toggleActionSelection(actionId: string, checked: boolean): void {
+      if (checked) {
+          this.selectedActionIds.add(actionId);
+      } else {
+          this.selectedActionIds.delete(actionId);
+      }
+      console.log('Selected IDs:', this.selectedActionIds);
+  }
+
+  // Preset buttons logic
+  applyPreset(preset: 'all' | 'read-only' | 'none'): void {
+    if (!this.selectedNode) return;
+
+    const actionsToModify = this.leafActionsForSelectedNode;
+    console.log(`Applying preset '${preset}' to actions:`, actionsToModify);
+
+    actionsToModify.forEach(action => {
+        let shouldBeSelected = false;
+        if (preset === 'all') {
+            shouldBeSelected = true;
+        } else if (preset === 'read-only') {
+            // Assuming 'read' actions end with '/read'
+            shouldBeSelected = action.id.toLowerCase().endsWith('/read');
+        } // 'none' remains false
+
+        this.toggleActionSelection(action.id, shouldBeSelected);
+    });
+     this.cdr.detectChanges(); // Update checkboxes after applying preset
+  }
+
   // --- Dialog Actions ---
 
   onCancel(): void {
@@ -290,8 +348,10 @@ export class RoleEditorDialogComponent implements OnInit {
 
   onSave(): void {
     if (this.roleForm.valid) {
-      const roleData = this.roleForm.value as Role;
+      const roleData = this.roleForm.getRawValue() as Role;
       roleData.allowedActionIds = Array.from(this.selectedActionIds);
+       // Ensure isSystemRole is correctly handled (it's disabled in form)
+      roleData.isSystemRole = this.data.role?.isSystemRole || false;
       this.dialogRef.close(roleData);
     }
   }

@@ -36,6 +36,13 @@
                 <mat-error *ngIf="assignmentGroup.get('roleId')?.hasError('required')">Vyberte rolu.</mat-error>
             </mat-form-field>
 
+            <!-- Edit Role Button -->
+            <button mat-icon-button color="accent" type="button"
+                    [disabled]="!assignmentGroup.get('roleId')?.value || isRoleSystem(assignmentGroup.get('roleId')?.value)"
+                    (click)="editAssignedRole(i)" matTooltip="Upraviť vybranú rolu (len vlastné)">
+                <mat-icon>settings</mat-icon> <!-- or edit -->
+            </button>
+
             <!-- Remove Button -->
             <button mat-icon-button color="warn" type="button" (click)="removeRoleAssignment(i)" matTooltip="Odobrať priradenie" class="remove-button">
                 <mat-icon>remove_circle_outline</mat-icon>

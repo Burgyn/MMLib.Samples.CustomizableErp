@@ -8,26 +8,122 @@
   font-weight: 500;
 }
 
-.action-tree {
-  max-height: 400px; /* Limit tree height and enable scrolling */
+.tree-container {
+  max-height: 300px; /* Adjust height as needed */
   overflow: auto;
-  border: 1px solid rgba(0,0,0,0.12); /* Add a subtle border */
+  border: 1px solid rgba(0,0,0,0.12);
   border-radius: 4px;
   padding: 10px;
+  margin-bottom: 1rem; /* Add margin below tree */
 }
 
 .mat-mdc-tree-node {
-  min-height: 36px; /* Adjust node height */
+  min-height: 36px;
   display: flex;
   align-items: center;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+.mat-mdc-tree-node:hover {
+    background-color: rgba(0,0,0,0.04);
+}
+
+.selected-node {
+    background-color: rgba(63, 81, 181, 0.1); /* Example selection color */
+    font-weight: 500;
+}
+
+.node-name {
+    margin-left: 4px;
+}
+
+.folder-icon, .leaf-icon {
+    margin-left: 4px;
+    color: grey;
+}
+
+.section-divider {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Action Panel Styles (Below Tree) */
+.action-panel-below {
+    min-height: 200px; /* Give it some min height */
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background-color: #fafafa;
+}
+
+.action-panel-below h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.selected-node-name {
+    font-style: italic;
+    color: var(--primary-color);
+}
+
+.preset-buttons {
+    margin-bottom: 1rem;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.preset-buttons .mat-icon {
+    margin-right: 4px;
+}
+
+.action-divider {
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+
+.action-checkboxes {
+    display: grid; /* Use grid for checkboxes */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Responsive columns */
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.action-checkbox {
+    display: block;
+}
+
+.no-actions-message, .select-node-prompt {
+    color: grey;
+    font-style: italic;
+    text-align: center;
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.select-node-prompt mat-icon {
+    font-size: 3rem;
+    height: 3rem;
+    width: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Ensure dialog content can grow */
+:host ::ng-deep .mat-mdc-dialog-content {
+    max-height: 75vh; /* Adjust as needed */
 }
 
 .tree-checkbox {
     margin-right: 8px;
-}
-
-.node-name {
-    font-weight: 500;
 }
 
 .node-description {
