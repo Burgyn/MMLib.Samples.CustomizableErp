@@ -51,11 +51,18 @@
 
 /* Action Panel Styles (Below Tree) */
 .action-panel-below {
-    min-height: 200px; /* Give it some min height */
+    /* Remove fixed heights and overflow */
+    /* min-height: 250px; */
+    /* height: 250px; */
+    /* max-height: 300px; */
+    /* overflow-y: auto; */
+    min-height: 200px; /* Keep some min-height for the panel */
     padding: 1rem;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     background-color: #fafafa;
+    display: flex;
+    flex-direction: column;
 }
 
 .action-panel-below h4 {
@@ -66,6 +73,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .selected-node-name {
@@ -84,14 +92,17 @@
 
 .action-divider {
     margin-bottom: 1rem;
-    flex-shrink: 0;
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 .action-checkboxes {
-    display: grid; /* Use grid for checkboxes */
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Responsive columns */
-    gap: 0.75rem;
-    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0; /* Removed top margin, handled by divider */
+    overflow-y: auto; /* Enable scrolling ONLY for checkboxes */
+    flex-grow: 1; /* Allow checkbox area to grow and fill space */
+    padding-right: 5px; /* Add padding for scrollbar */
 }
 
 .action-checkbox {

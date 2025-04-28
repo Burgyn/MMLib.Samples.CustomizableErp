@@ -319,25 +319,34 @@ export class RoleEditorDialogComponent implements OnInit, OnDestroy {
       console.log('Selected IDs:', this.selectedActionIds);
   }
 
-  // Preset buttons logic
+  // Preset buttons logic - Applies to selected node AND all descendants
   applyPreset(preset: 'all' | 'read-only' | 'none'): void {
     if (!this.selectedNode) return;
 
-    const actionsToModify = this.leafActionsForSelectedNode;
-    console.log(`Applying preset '${preset}' to actions:`, actionsToModify);
+    const nodeIdPrefix = this.selectedNode.id;
+    // Find ALL actions under the selected node (including deeper descendants)
+    const descendantActions = this.allActions.filter(action =>
+        action.id === nodeIdPrefix || action.id.startsWith(nodeIdPrefix + '/')
+    );
 
-    actionsToModify.forEach(action => {
+    console.log(`Applying preset '${preset}' to node ${nodeIdPrefix} and its ${descendantActions.length} descendant actions.`);
+
+    descendantActions.forEach(action => {
         let shouldBeSelected = false;
         if (preset === 'all') {
             shouldBeSelected = true;
         } else if (preset === 'read-only') {
-            // Assuming 'read' actions end with '/read'
-            shouldBeSelected = action.id.toLowerCase().endsWith('/read');
+            // Assuming 'read' actions end with '/read' or are the node itself if it implies read
+            // This logic might need refinement based on exact action naming conventions
+            shouldBeSelected = action.id.toLowerCase().endsWith('/read') || action.id === nodeIdPrefix; // Basic read-only logic
         } // 'none' remains false
 
         this.toggleActionSelection(action.id, shouldBeSelected);
     });
-     this.cdr.detectChanges(); // Update checkboxes after applying preset
+
+    // Refresh the view for the currently displayed checkboxes
+    this.leafActionsForSelectedNode = this.getLeafActionsForNode(this.selectedNode);
+    this.cdr.detectChanges();
   }
 
   // --- Dialog Actions ---
