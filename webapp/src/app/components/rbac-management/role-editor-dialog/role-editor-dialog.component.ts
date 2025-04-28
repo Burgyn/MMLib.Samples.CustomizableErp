@@ -76,6 +76,23 @@ export class RoleEditorDialogComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
+  // Map for display names
+  private displayNameMap = new Map<string, string>([
+    ['Kros.Invoicing', 'Fakturácia'],
+    ['Kros.Warehouse', 'Sklad'], // Simplified name
+    ['documents', 'Dokumenty'],
+    ['invoices', 'Faktúry'],
+    ['priceQuotes', 'Cenové ponuky'], // New
+    ['orders', 'Objednávky'], // New
+    ['deliveryNotes', 'Dodacie listy'], // New
+    ['documentTemplates', 'Šablóny dokumentov'],
+    ['warehouses', 'Sklady'],
+    ['stockItems', 'Skladové položky'],
+    ['nonStockItems', 'Neskladové položky'],
+    ['stockMovements', 'Skladové pohyby']
+    // Add more mappings as needed
+  ]);
+
   constructor(
     public dialogRef: MatDialogRef<RoleEditorDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { role: Role | null },
@@ -128,6 +145,11 @@ export class RoleEditorDialogComponent implements OnInit, OnDestroy {
 
   // --- Tree Helper Methods ---
 
+  // Helper to get display name
+  private getDisplayName(segment: string): string {
+    return this.displayNameMap.get(segment) || segment; // Fallback to segment if no mapping
+  }
+
   private transformer = (node: ActionNode, level: number): FlatActionNode => {
     return {
       id: node.id,
@@ -143,48 +165,46 @@ export class RoleEditorDialogComponent implements OnInit, OnDestroy {
 
   isLeafNode = (_: number, node: FlatActionNode) => !node.expandable;
 
-  // Updated buildActionTree to filter out leaf nodes for the tree display
+  // Updated buildActionTree to use display names
   buildActionTree(actions: Action[]): ActionNode[] {
     const tree: ActionNode[] = [];
     const map = new Map<string, ActionNode>();
 
-    // Process all actions to build the map of potential parents
     actions.forEach(action => {
-        const parts = action.id.split('/');
-        parts.pop(); // Ignore the last part (leaf action)
-        let currentPath = '';
-        let parentNode: ActionNode | undefined = undefined;
-        for (let i = 0; i < parts.length; i++) {
-            const segment = parts[i];
-            currentPath = i === 0 ? segment : `${currentPath}/${segment}`;
-            if (!map.has(currentPath)) {
-                const newNode: ActionNode = { id: currentPath, name: segment, children: [] };
-                map.set(currentPath, newNode);
-                if (parentNode?.children) {
-                    // Add to existing parent only if not already present
-                    if (!parentNode.children.some(child => child.id === newNode.id)) {
-                         parentNode.children.push(newNode);
-                    }
-                } else if (i === 0) {
-                     // Add top-level node if not already present in the tree array
-                     if (!tree.some(node => node.id === newNode.id)) {
-                        tree.push(newNode);
-                    }
-                }
-                 parentNode = newNode;
-            } else {
-                parentNode = map.get(currentPath)!;
+      const parts = action.id.split('/');
+      parts.pop(); // Ignore the last part (leaf action)
+      let currentPath = '';
+      let parentNode: ActionNode | undefined = undefined;
+      for (let i = 0; i < parts.length; i++) {
+        const segment = parts[i];
+        const displayName = this.getDisplayName(segment); // Get display name
+        currentPath = i === 0 ? segment : `${currentPath}/${segment}`;
+        if (!map.has(currentPath)) {
+          // Use displayName for the node's name property
+          const newNode: ActionNode = { id: currentPath, name: displayName, children: [] };
+          map.set(currentPath, newNode);
+          if (parentNode?.children) {
+            if (!parentNode.children.some(child => child.id === newNode.id)) {
+              parentNode.children.push(newNode);
             }
+          } else if (i === 0) {
+            if (!tree.some(node => node.id === newNode.id)) {
+              tree.push(newNode);
+            }
+          }
+          parentNode = newNode;
+        } else {
+          parentNode = map.get(currentPath)!;
         }
+      }
     });
 
-    // Sort nodes alphabetically
     const sortNodes = (nodes: ActionNode[]) => {
-        nodes.sort((a, b) => a.name.localeCompare(b.name));
-        nodes.forEach(node => { if (node.children) { sortNodes(node.children); } });
+      nodes.sort((a, b) => a.name.localeCompare(b.name));
+      nodes.forEach(node => { if (node.children) { sortNodes(node.children); } });
     };
     sortNodes(tree);
-    console.log('Built Tree Structure (categories only):', tree);
+    console.log('Built Tree Structure with Display Names:', tree);
     return tree;
   }
 
@@ -300,7 +320,7 @@ export class RoleEditorDialogComponent implements OnInit, OnDestroy {
         // Must not contain any further slashes to be a direct action
         return !remainingPath.includes('/');
     });
-    console.log(`Leaf actions for node ${node.id}:`, directChildrenActions);
+    console.log(`Leaf actions for node ${node.id} (${node.name}):`, directChildrenActions);
     return directChildrenActions.sort((a,b)=> a.id.localeCompare(b.id)); // Sort actions
   }
 
