@@ -51,12 +51,8 @@
 
 /* Action Panel Styles (Below Tree) */
 .action-panel-below {
-    /* Remove fixed heights and overflow */
-    /* min-height: 250px; */
-    /* height: 250px; */
-    /* max-height: 300px; */
-    /* overflow-y: auto; */
-    min-height: 200px; /* Keep some min-height for the panel */
+    /* Remove min-height, let content determine height */
+    /* min-height: 200px; */
     padding: 1rem;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
@@ -99,10 +95,15 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    margin-top: 0; /* Removed top margin, handled by divider */
-    overflow-y: auto; /* Enable scrolling ONLY for checkboxes */
-    flex-grow: 1; /* Allow checkbox area to grow and fill space */
-    padding-right: 5px; /* Add padding for scrollbar */
+    margin-top: 0;
+    overflow-y: auto;
+    /* Remove flex-grow and set fixed height */
+    /* flex-grow: 1; */
+    height: 160px; /* Fixed height for ~4 checkboxes */
+    padding-right: 5px;
+    border: 1px dashed #ccc; /* Add temporary border for debugging */
+    padding: 0.5rem;
+    background-color: white; /* Background to see area */
 }
 
 .action-checkbox {
