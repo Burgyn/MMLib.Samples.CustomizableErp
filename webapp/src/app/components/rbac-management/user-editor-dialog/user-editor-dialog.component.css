@@ -25,12 +25,20 @@
 }
 
 .mat-expansion-panel-header {
-    /* Optional: Adjust header styles */
     font-weight: 500;
+    position: relative; /* Needed for potential absolute positioning if required */
 }
 
-.mat-expansion-panel-header .remove-button {
-    margin-left: auto; /* Push delete button to the right */
+/* Target the specific delete button within the header */
+.mat-expansion-panel-header button[mat-icon-button][color="warn"] {
+    opacity: 0; /* Initially hidden */
+    transition: opacity 0.2s ease-in-out;
+    margin-left: auto; /* Ensure it stays pushed to the right */
+}
+
+/* Show delete button on header hover */
+.mat-expansion-panel-header:hover button[mat-icon-button][color="warn"] {
+    opacity: 1;
 }
 
 /* Content within the panel */
