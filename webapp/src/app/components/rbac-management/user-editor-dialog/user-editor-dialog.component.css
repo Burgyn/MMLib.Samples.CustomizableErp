@@ -5,7 +5,7 @@
 }
 
 .flex-item {
-  flex: 1 1 50%; /* Allow fields to grow and shrink */
+  flex: 1 1 50%;
 }
 
 .assignments-title {
@@ -14,51 +14,60 @@
   font-weight: 500;
 }
 
-.assignment-row {
-  display: flex;
-  align-items: flex-start; /* Align items to the top */
-  gap: 1rem;
+/* Style for each assignment block */
+.assignment-item {
+  padding: 1rem;
   margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px dashed #ccc;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #fafafa; /* Slightly different background */
 }
 
-.assignment-row:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
+.assignment-item:last-child {
+  margin-bottom: 0;
 }
 
-.role-select {
-  flex: 0 0 200px; /* Fixed width for role select */
-  margin-top: 8px; /* Align with other fields roughly */
-}
-
-/* Container for dynamic scopes */
-.scopes-container {
-    flex-grow: 1;
+.assignment-header {
     display: flex;
-    flex-wrap: wrap;
+    align-items: flex-start; /* Align top */
     gap: 1rem;
+    margin-bottom: 1rem;
 }
 
-.scope-field {
-    flex: 1 1 calc(50% - 1rem); /* Two columns layout for scopes */
-    min-width: 180px; /* Minimum width before wrapping */
-}
-
-/* Adjust toggle alignment */
-.scope-toggle {
-    margin-top: 16px;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    height: 56px; /* Match form field height */
+.role-select-full {
+  flex-grow: 1; /* Take available space */
 }
 
 .remove-button {
   flex-shrink: 0;
-  margin-top: 16px; /* Align vertically better */
+  margin-top: 8px; /* Align vertically with form field */
+}
+
+.scope-details-section {
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+    border-top: 1px solid #eee;
+}
+
+.scope-details-section h4 {
+    font-size: 1em;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    color: #666;
+}
+
+/* Grid layout for scope fields */
+.scope-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive columns */
+    gap: 1rem;
+}
+
+.scope-toggle-container {
+    display: flex;
+    align-items: center;
+    min-height: 56px; /* Match form field height for alignment */
+    padding-top: 8px; /* Adjust alignment */
 }
 
 .add-assignment-button {
