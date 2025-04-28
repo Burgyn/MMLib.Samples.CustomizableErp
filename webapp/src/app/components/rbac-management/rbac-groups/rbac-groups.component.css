@@ -1,0 +1,58 @@
+.groups-table {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.mat-mdc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 8px;
+}
+
+.new-group-button {
+  margin-left: auto;
+}
+
+.mat-mdc-icon-button {
+  opacity: 0.7;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.mat-mdc-icon-button:hover {
+  opacity: 1;
+}
+
+/* Style chips for members */
+.mat-mdc-chip {
+    min-height: 24px;
+    height: 24px;
+    font-size: 12px;
+    margin: 2px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.mat-mdc-chip mat-icon {
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+    margin-right: 4px;
+}
+
+.mat-mdc-chip-listbox {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.text-muted {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.mat-mdc-no-data-row .mat-mdc-cell {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+}

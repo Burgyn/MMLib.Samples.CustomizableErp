@@ -1,5 +1,6 @@
 import { DBSchema, IDBPDatabase, openDB } from 'idb';
 
+import { Group } from '../models/rbac/group.model'; // Import Group model
 import { Injectable } from '@angular/core';
 import { NumericRange } from '../models/rbac/numeric-range.model'; // Import NumericRange model
 import { Role } from '../models/rbac/role.model'; // Import Role
@@ -26,6 +27,7 @@ interface RbacDB extends DBSchema {
   };
   warehouses: { key: string; value: Warehouse; indexes: { name: string }; }; // Add warehouses store
   numericRanges: { key: string; value: NumericRange; indexes: { name: string }; }; // Add numericRanges store
+  groups: { key: string; value: Group; indexes: { name: string }; }; // Add groups store
   // Add other stores if needed (e.g., groups)
 }
 
@@ -37,7 +39,7 @@ export type StoreName = keyof RbacDB;
 })
 export class IndexedDbService {
   private dbName = 'rbac-db';
-  private dbVersion = 3; // Increment version for schema change
+  private dbVersion = 4; // Increment version for schema change
   private dbPromise: Promise<IDBPDatabase<RbacDB>>;
 
   constructor() {
@@ -73,6 +75,12 @@ export class IndexedDbService {
             }
              if (!db.objectStoreNames.contains('numericRanges')) {
                 const store = db.createObjectStore('numericRanges', { keyPath: 'id' });
+                store.createIndex('name', 'name');
+            }
+        }
+         if (oldVersion < 4) { // Add groups store
+            if (!db.objectStoreNames.contains('groups')) {
+                const store = db.createObjectStore('groups', { keyPath: 'id' });
                 store.createIndex('name', 'name');
             }
         }

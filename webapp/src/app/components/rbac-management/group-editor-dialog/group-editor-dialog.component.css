@@ -1,0 +1,15 @@
+.full-width {
+  width: 100%;
+}
+
+.members-title {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+/* Optional: Style the multi-select trigger */
+.mat-mdc-select-trigger {
+  font-style: italic;
+  color: grey;
+}

@@ -4,6 +4,7 @@ import { Scope, User, UserRoleAssignment } from '../models/rbac/user.model';
 import { catchError, filter, first, map, switchMap, tap } from 'rxjs/operators';
 
 import { Action } from '../models/rbac/action.model';
+import { Group } from '../models/rbac/group.model';
 import { Injectable } from '@angular/core';
 import { NumericRange } from '../models/rbac/numeric-range.model';
 import { Role } from '../models/rbac/role.model';
@@ -22,6 +23,7 @@ export class RbacService {
   private tenantsStore: StoreName = 'tenants';
   private warehousesStore: StoreName = 'warehouses';
   private numericRangesStore: StoreName = 'numericRanges';
+  private groupsStore: StoreName = 'groups';
 
   private isInitialized = new BehaviorSubject<boolean>(false);
   isInitialized$ = this.isInitialized.asObservable();
@@ -148,6 +150,24 @@ export class RbacService {
     }
   ];
 
+  private initialGroups: Group[] = [
+    {
+        id: 'group_kros_all', name: 'Všetci KROS', description: 'Všetci používatelia z KROS',
+        memberUserIds: ['admin@kros.sk', 'uctovnik@kros.sk'],
+        memberGroupIds: []
+    },
+    {
+        id: 'group_managers', name: 'Manažéri', description: 'Skupina manažérov',
+        memberUserIds: ['manager@burgyn.sk'],
+        memberGroupIds: []
+    },
+    {
+        id: 'group_nested_example', name: 'Príklad vnorenej', description: '',
+        memberUserIds: [],
+        memberGroupIds: ['group_managers'] // Contains the Managers group
+    }
+  ];
+
   constructor(private indexedDbService: IndexedDbService) {
     this.initializeDatabase();
   }
@@ -159,9 +179,10 @@ export class RbacService {
       await this.ensureInitialData(this.numericRangesStore, this.initialNumericRanges);
       await this.ensureInitialData(this.rolesStore, this.initialRoles);
       await this.ensureInitialData(this.usersStore, this.initialUsers);
+      await this.ensureInitialData(this.groupsStore, this.initialGroups);
 
       this.isInitialized.next(true);
-      console.log('RBAC Service Initialized (Roles, Users, Tenants, Warehouses, NumericRanges).');
+      console.log('RBAC Service Initialized (Roles, Users, Tenants, Warehouses, NumericRanges, Groups).');
     } catch (error) {
       console.error('Error initializing RBAC service database:', error);
       this.isInitialized.next(false);
@@ -373,6 +394,64 @@ export class RbacService {
         console.error(`Error getting relevant scope types for role ${roleId}:`, err);
         const defaultScopes: ScopeType[] = ['tenant', 'own'];
         return of(defaultScopes);
+      })
+    );
+  }
+
+  getGroups(): Observable<Group[]> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.getAll<Group>(this.groupsStore))),
+      catchError(err => {
+        console.error('Error fetching groups:', err);
+        return of([]);
+      })
+    );
+  }
+
+  getGroup(id: string): Observable<Group | undefined> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.getById<Group>(this.groupsStore, id))),
+      catchError(err => {
+        console.error(`Error fetching group ${id}:`, err);
+        return of(undefined);
+      })
+    );
+  }
+
+  saveGroup(group: Group): Observable<Group> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.getById<Group>(this.groupsStore, group.id || ''))),
+      switchMap(existingGroup => {
+        let saveOperation: Promise<string>;
+        if (existingGroup) {
+          console.log('Updating existing group:', group);
+          saveOperation = this.indexedDbService.put<Group>(this.groupsStore, group);
+        } else {
+          if (!group.id) {
+            group.id = `group_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          }
+          console.log('Adding new group:', group);
+          saveOperation = this.indexedDbService.add<Group>(this.groupsStore, group);
+        }
+        return from(saveOperation).pipe(
+          tap(savedId => console.log(`Group ${savedId} saved successfully.`)),
+          map(() => group)
+        );
+      }),
+      catchError(err => {
+        console.error('Error saving group:', err);
+        return throwError(() => new Error('Failed to save group'));
+      })
+    );
+  }
+
+  deleteGroup(id: string): Observable<void> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.delete(this.groupsStore, id))),
+      tap(() => console.log(`Group ${id} deleted.`)),
+      catchError(err => {
+        console.error('Error deleting group:', err);
+        return throwError(() => new Error('Failed to delete group'));
       })
     );
   }

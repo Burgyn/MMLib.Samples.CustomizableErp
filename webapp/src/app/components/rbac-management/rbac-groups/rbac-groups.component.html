@@ -1,1 +1,64 @@
-<p>rbac-groups works!</p>
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Správa skupín</mat-card-title>
+    <button mat-flat-button color="primary" (click)="createNewGroup()" class="new-group-button">
+      <mat-icon>group_add</mat-icon>
+      Nová skupina
+    </button>
+  </mat-card-header>
+  <mat-card-content>
+    <table mat-table [dataSource]="groups" class="mat-elevation-z8 groups-table">
+
+      <!-- Name Column -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef> Názov </th>
+        <td mat-cell *matCellDef="let group"> {{group.name}} </td>
+      </ng-container>
+
+      <!-- Description Column -->
+      <ng-container matColumnDef="description">
+        <th mat-header-cell *matHeaderCellDef> Popis </th>
+        <td mat-cell *matCellDef="let group"> {{group.description}} </td>
+      </ng-container>
+
+      <!-- Members Column -->
+      <ng-container matColumnDef="members">
+        <th mat-header-cell *matHeaderCellDef> Členovia (Používatelia / Skupiny) </th>
+        <td mat-cell *matCellDef="let group">
+          <mat-chip-listbox aria-label="Group members">
+            <!-- User Members -->
+            <mat-chip *ngFor="let userName of group.memberUserNames" class="user-chip">
+                <mat-icon>person</mat-icon> {{userName}}
+            </mat-chip>
+            <!-- Group Members -->
+            <mat-chip *ngFor="let groupName of group.memberGroupNames" color="accent" class="group-chip">
+                 <mat-icon>group</mat-icon> {{groupName}}
+            </mat-chip>
+             <span *ngIf="(!group.memberUserNames || group.memberUserNames.length === 0) && (!group.memberGroupNames || group.memberGroupNames.length === 0)" class="text-muted">Žiadni členovia</span>
+          </mat-chip-listbox>
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef> Akcie </th>
+        <td mat-cell *matCellDef="let group">
+          <button mat-icon-button color="primary" (click)="editGroup(group)" matTooltip="Upraviť skupinu">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="deleteGroup(group)" matTooltip="Vymazať skupinu">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+      <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell text-center" [attr.colspan]="displayedColumns.length">Žiadne skupiny na zobrazenie.</td>
+      </tr>
+
+    </table>
+  </mat-card-content>
+</mat-card>

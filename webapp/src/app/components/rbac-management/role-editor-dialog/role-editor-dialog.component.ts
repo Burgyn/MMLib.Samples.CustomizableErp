@@ -79,18 +79,17 @@ export class RoleEditorDialogComponent implements OnInit, OnDestroy {
   // Map for display names
   private displayNameMap = new Map<string, string>([
     ['Kros.Invoicing', 'Fakturácia'],
-    ['Kros.Warehouse', 'Sklad'], // Simplified name
+    ['Kros.Warehouse', 'Sklad'],
     ['documents', 'Dokumenty'],
     ['invoices', 'Faktúry'],
-    ['priceQuotes', 'Cenové ponuky'], // New
-    ['orders', 'Objednávky'], // New
-    ['deliveryNotes', 'Dodacie listy'], // New
+    ['priceQuotes', 'Cenové ponuky'],
+    ['orders', 'Objednávky'],
+    ['deliveryNotes', 'Dodacie listy'],
     ['documentTemplates', 'Šablóny dokumentov'],
     ['warehouses', 'Sklady'],
     ['stockItems', 'Skladové položky'],
     ['nonStockItems', 'Neskladové položky'],
     ['stockMovements', 'Skladové pohyby']
-    // Add more mappings as needed
   ]);
 
   constructor(
