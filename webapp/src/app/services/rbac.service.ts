@@ -1,10 +1,16 @@
 import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
 import { IndexedDbService, StoreName } from './indexed-db.service';
+import { Scope, User, UserRoleAssignment } from '../models/rbac/user.model';
 import { catchError, filter, first, map, switchMap, tap } from 'rxjs/operators';
 
 import { Action } from '../models/rbac/action.model';
 import { Injectable } from '@angular/core';
+import { NumericRange } from '../models/rbac/numeric-range.model';
 import { Role } from '../models/rbac/role.model';
+import { Tenant } from '../models/rbac/tenant.model';
+import { Warehouse } from '../models/rbac/warehouse.model';
+
+export type ScopeType = 'tenant' | 'warehouse' | 'numericRange' | 'own';
 
 @Injectable({
   providedIn: 'root'
@@ -12,6 +18,11 @@ import { Role } from '../models/rbac/role.model';
 export class RbacService {
 
   private rolesStore: StoreName = 'roles';
+  private usersStore: StoreName = 'users';
+  private tenantsStore: StoreName = 'tenants';
+  private warehousesStore: StoreName = 'warehouses';
+  private numericRangesStore: StoreName = 'numericRanges';
+
   private isInitialized = new BehaviorSubject<boolean>(false);
   isInitialized$ = this.isInitialized.asObservable();
 
@@ -38,13 +49,31 @@ export class RbacService {
     { id: 'Kros.Warehouse/warehouses/stockMovements/delete', description: 'Vymazávanie skladových pohybov.' },
   ];
 
+  private initialTenants: Tenant[] = [
+    { id: 'tenant_kros', name: 'KROS a.s.' },
+    { id: 'tenant_burgyn', name: 'Burgyn s.r.o.' },
+    { id: 'tenant_other', name: 'Iná Firma spol. s r.o.' }
+  ];
+
+  private initialWarehouses: Warehouse[] = [
+    { id: 'wh_central', name: 'Centrálny sklad (KE)' },
+    { id: 'wh_branch_ba', name: 'Pobočka Bratislava' },
+    { id: 'wh_external', name: 'Externý sklad XY' }
+  ];
+
+  private initialNumericRanges: NumericRange[] = [
+    { id: 'nr_inv_2024', name: 'Faktúry 2024', prefix: 'FA24' },
+    { id: 'nr_inv_2023', name: 'Faktúry 2023', prefix: 'FA23' },
+    { id: 'nr_cash', name: 'Pokladňa', prefix: 'PK' }
+  ];
+
   private initialRoles: Role[] = [
     {
       id: 'sys_admin',
       name: 'Administrátor',
       description: 'Plný prístup ku všetkým funkciám a nastaveniam.',
       isSystemRole: true,
-      allowedActionIds: this.dummyActions.map(a => a.id) // Admin has all permissions
+      allowedActionIds: this.dummyActions.map(a => a.id)
     },
     {
       id: 'sys_accountant',
@@ -82,45 +111,73 @@ export class RbacService {
     }
   ];
 
+  private initialUsers: User[] = [
+    {
+      id: 'admin@kros.sk', name: 'Admin Kros', email: 'admin@kros.sk',
+      roleAssignments: [
+        { roleId: 'sys_admin', scopes: [{ type: 'tenant', value: 'tenant_kros' }] }
+      ]
+    },
+    {
+      id: 'uctovnik@kros.sk', name: 'Účtovník Kros', email: 'uctovnik@kros.sk',
+      roleAssignments: [
+        { roleId: 'sys_accountant', scopes: [{ type: 'tenant', value: 'tenant_kros' }, { type: 'numericRange', value: 'nr_inv_2024' }] }
+      ]
+    },
+    {
+      id: 'manager@burgyn.sk', name: 'Manažér Burgyn', email: 'manager@burgyn.sk',
+      roleAssignments: [
+        { roleId: 'cust_warehouse_manager', scopes: [{ type: 'tenant', value: 'tenant_burgyn' }, { type: 'warehouse', value: 'wh_central' }] },
+        { roleId: 'sys_accountant', scopes: [{ type: 'tenant', value: 'tenant_burgyn' }] }
+      ]
+    },
+    {
+      id: 'user@other.com', name: 'Bežný User', email: 'user@other.com',
+      roleAssignments: [
+        // No roles assigned initially
+      ]
+    }
+  ];
+
   constructor(private indexedDbService: IndexedDbService) {
-    // Start initialization immediately
     this.initializeDatabase();
   }
 
   private async initializeDatabase(): Promise<void> {
     try {
-      await this.ensureInitialRoles();
+      await this.ensureInitialData(this.tenantsStore, this.initialTenants);
+      await this.ensureInitialData(this.warehousesStore, this.initialWarehouses);
+      await this.ensureInitialData(this.numericRangesStore, this.initialNumericRanges);
+      await this.ensureInitialData(this.rolesStore, this.initialRoles);
+      await this.ensureInitialData(this.usersStore, this.initialUsers);
+
       this.isInitialized.next(true);
-      console.log('RBAC Service Initialized.');
+      console.log('RBAC Service Initialized (Roles, Users, Tenants, Warehouses, NumericRanges).');
     } catch (error) {
       console.error('Error initializing RBAC service database:', error);
-      this.isInitialized.next(false); // Indicate initialization failed
-      // Optionally, propagate the error or handle it further
+      this.isInitialized.next(false);
     }
   }
 
-  private async ensureInitialRoles(): Promise<void> {
-    const count = await this.indexedDbService.count(this.rolesStore);
+  private async ensureInitialData<T extends { id: string }>(storeName: StoreName, initialData: T[]): Promise<void> {
+    const count = await this.indexedDbService.count(storeName);
     if (count === 0) {
-      console.log('Initializing roles in IndexedDB...');
-      // Use Promise.all to run puts in parallel for faster initialization
-      await Promise.all(this.initialRoles.map(role =>
-        this.indexedDbService.put(this.rolesStore, role)
+      console.log(`Initializing ${storeName} in IndexedDB...`);
+      await Promise.all(initialData.map(item =>
+        this.indexedDbService.put<T>(storeName, item)
       ));
-      console.log('Initial roles loaded into IndexedDB.');
+      console.log(`Initial ${storeName} loaded into IndexedDB.`);
     }
   }
 
-  // Helper function to wait for initialization
   private waitForInitialization<T>(): Observable<T> {
     return this.isInitialized$.pipe(
       filter(initialized => initialized === true),
-      first(), // Take the first true value and complete
-    ) as Observable<T>; // Cast needed because filter/first don't change the generic type directly
+      first(),
+    ) as Observable<T>;
   }
 
   getActions(): Observable<Action[]> {
-    // Actions are static, no need to wait for DB init
     return of(this.dummyActions);
   }
 
@@ -129,7 +186,7 @@ export class RbacService {
       switchMap(() => from(this.indexedDbService.getAll<Role>(this.rolesStore))),
       catchError(err => {
         console.error('Error fetching roles:', err);
-        return of([]); // Return empty array on error
+        return of([]);
       })
     );
   }
@@ -139,67 +196,175 @@ export class RbacService {
       switchMap(() => from(this.indexedDbService.getById<Role>(this.rolesStore, id))),
       catchError(err => {
         console.error(`Error fetching role ${id}:`, err);
-        return of(undefined); // Return undefined on error
+        return of(undefined);
       })
     );
   }
 
   saveRole(role: Role): Observable<Role> {
     return this.waitForInitialization<void>().pipe(
-      switchMap(() => from(this.indexedDbService.getById<Role>(this.rolesStore, role.id || ''))), // Check if exists
+      switchMap(() => from(this.indexedDbService.getById<Role>(this.rolesStore, role.id || ''))),
       switchMap(existingRole => {
         let saveOperation: Promise<string>;
         if (existingRole) {
           console.log('Updating existing role:', role);
-          // Update existing role
           saveOperation = this.indexedDbService.put<Role>(this.rolesStore, role);
         } else {
-          // Add new role - generate ID if missing
           if (!role.id) {
-            role.id = `cust_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+            role.id = `cust_role_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
           }
-          role.isSystemRole = false; // Ensure new roles are never system roles
+          role.isSystemRole = false;
           console.log('Adding new role:', role);
           saveOperation = this.indexedDbService.add<Role>(this.rolesStore, role);
         }
         return from(saveOperation).pipe(
           tap(savedId => console.log(`Role ${savedId} saved successfully.`)),
-          map(() => role) // Return the role object after save
+          map(() => role)
         );
       }),
       catchError(err => {
         console.error('Error saving role:', err);
-        return throwError(() => new Error('Failed to save role')); // Propagate error
+        return throwError(() => new Error('Failed to save role'));
       })
     );
   }
 
   deleteRole(id: string): Observable<void> {
     return this.waitForInitialization<void>().pipe(
-      switchMap(() => this.getRole(id)), // Use getRole which already handles initialization wait & fetch
+      switchMap(() => this.getRole(id)),
       switchMap(role => {
         if (role && role.isSystemRole) {
           console.error('System roles cannot be deleted.');
           return throwError(() => new Error('Systémové role nie je možné vymazať.'));
         } else if (role) {
           console.log('Deleting role:', id);
-          // Delete from IndexedDB
           return from(this.indexedDbService.delete(this.rolesStore, id)).pipe(
             tap(() => console.log(`Role ${id} deleted.`))
           );
         } else {
           console.warn(`Role with id ${id} not found for deletion.`);
-          // Role not found, nothing to delete, return completed observable
           return of(void 0);
         }
       }),
       catchError(err => {
-        // Catch errors from getRole or delete operation
         console.error('Error deleting role:', err);
-        // Rethrow or return a user-friendly error
         return throwError(() => err);
       })
     );
   }
 
+  getTenants(): Observable<Tenant[]> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.getAll<Tenant>(this.tenantsStore))),
+      catchError(err => {
+        console.error('Error fetching tenants:', err);
+        return of([]);
+      })
+    );
+  }
+
+  getWarehouses(): Observable<Warehouse[]> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.getAll<Warehouse>(this.warehousesStore))),
+      catchError(err => {
+        console.error('Error fetching warehouses:', err);
+        return of([]);
+      })
+    );
+  }
+
+  getNumericRanges(): Observable<NumericRange[]> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.getAll<NumericRange>(this.numericRangesStore))),
+      catchError(err => {
+        console.error('Error fetching numeric ranges:', err);
+        return of([]);
+      })
+    );
+  }
+
+  getUsers(): Observable<User[]> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.getAll<User>(this.usersStore))),
+      catchError(err => {
+        console.error('Error fetching users:', err);
+        return of([]);
+      })
+    );
+  }
+
+  getUser(id: string): Observable<User | undefined> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.getById<User>(this.usersStore, id))),
+      catchError(err => {
+        console.error(`Error fetching user ${id}:`, err);
+        return of(undefined);
+      })
+    );
+  }
+
+  saveUser(user: User): Observable<User> {
+    return this.waitForInitialization<void>().pipe(
+      tap(u => { if (!user.id) { user.id = user.email; } }),
+      switchMap(() => from(this.indexedDbService.getById<User>(this.usersStore, user.id))),
+      switchMap(existingUser => {
+        let saveOperation: Promise<string>;
+        if (existingUser) {
+          console.log('Updating existing user:', user);
+          saveOperation = this.indexedDbService.put<User>(this.usersStore, user);
+        } else {
+          console.log('Adding new user:', user);
+          saveOperation = this.indexedDbService.add<User>(this.usersStore, user);
+        }
+        return from(saveOperation).pipe(
+          tap(savedId => console.log(`User ${savedId} saved successfully.`)),
+          map(() => user)
+        );
+      }),
+      catchError(err => {
+        console.error('Error saving user:', err);
+        return throwError(() => new Error('Failed to save user'));
+      })
+    );
+  }
+
+  deleteUser(id: string): Observable<void> {
+    return this.waitForInitialization<void>().pipe(
+      switchMap(() => from(this.indexedDbService.delete(this.usersStore, id))),
+      tap(() => console.log(`User ${id} deleted.`)),
+      catchError(err => {
+        console.error('Error deleting user:', err);
+        return throwError(() => new Error('Failed to delete user'));
+      })
+    );
+  }
+
+  getRelevantScopeTypes(roleId: string): Observable<ScopeType[]> {
+    return this.getRole(roleId).pipe(
+      map(role => {
+        const relevantTypes = new Set<ScopeType>();
+        relevantTypes.add('tenant');
+        relevantTypes.add('own');
+
+        if (!role || !role.allowedActionIds) {
+          return Array.from(relevantTypes);
+        }
+
+        for (const actionId of role.allowedActionIds) {
+          if (actionId.startsWith('Kros.Warehouse/')) {
+            relevantTypes.add('warehouse');
+          }
+          if (actionId.startsWith('Kros.Invoicing/')) {
+            relevantTypes.add('numericRange');
+          }
+        }
+        return Array.from(relevantTypes);
+      }),
+      catchError(err => {
+        console.error(`Error getting relevant scope types for role ${roleId}:`, err);
+        const defaultScopes: ScopeType[] = ['tenant', 'own'];
+        return of(defaultScopes);
+      })
+    );
+  }
 }

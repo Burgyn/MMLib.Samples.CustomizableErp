@@ -1,0 +1,72 @@
+.user-info {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.flex-item {
+  flex: 1 1 50%; /* Allow fields to grow and shrink */
+}
+
+.assignments-title {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.assignment-row {
+  display: flex;
+  align-items: flex-start; /* Align items to the top */
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed #ccc;
+}
+
+.assignment-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.role-select {
+  flex: 0 0 200px; /* Fixed width for role select */
+  margin-top: 8px; /* Align with other fields roughly */
+}
+
+/* Container for dynamic scopes */
+.scopes-container {
+    flex-grow: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.scope-field {
+    flex: 1 1 calc(50% - 1rem); /* Two columns layout for scopes */
+    min-width: 180px; /* Minimum width before wrapping */
+}
+
+/* Adjust toggle alignment */
+.scope-toggle {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    height: 56px; /* Match form field height */
+}
+
+.remove-button {
+  flex-shrink: 0;
+  margin-top: 16px; /* Align vertically better */
+}
+
+.add-assignment-button {
+  margin-top: 1rem;
+}
+
+.system-role-indicator {
+    font-style: italic;
+    color: grey;
+    font-size: 0.9em;
+}

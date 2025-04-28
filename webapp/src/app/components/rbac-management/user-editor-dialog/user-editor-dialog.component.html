@@ -1,0 +1,97 @@
+<h2 mat-dialog-title>{{ isEditMode ? 'Upraviť používateľa' : 'Nový používateľ' }}</h2>
+
+<mat-dialog-content [formGroup]="userForm">
+  <!-- Basic User Info -->
+  <div class="user-info">
+    <mat-form-field appearance="outline" class="flex-item">
+      <mat-label>Meno</mat-label>
+      <input matInput formControlName="name" required>
+      <mat-error *ngIf="userForm.get('name')?.hasError('required')">Meno je povinné.</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="flex-item">
+      <mat-label>Email</mat-label>
+      <input matInput formControlName="email" required email>
+      <mat-error *ngIf="userForm.get('email')?.hasError('required')">Email je povinný.</mat-error>
+      <mat-error *ngIf="userForm.get('email')?.hasError('email')">Neplatný formát emailu.</mat-error>
+    </mat-form-field>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <!-- Role Assignments -->
+  <h3 class="assignments-title">Priradenie rolí a rozsahov</h3>
+  <div formArrayName="roleAssignments">
+    <div *ngFor="let assignmentGroup of roleAssignmentsFormArray.controls; let i = index" [formGroupName]="i" class="assignment-row">
+
+      <!-- Role Selection (triggers scope update) -->
+      <mat-form-field appearance="outline" class="role-select">
+        <mat-label>Rola</mat-label>
+        <mat-select formControlName="roleId" required>
+          <mat-option *ngFor="let role of allRoles$ | async" [value]="role.id">
+            {{ role.name }} <span *ngIf="role.isSystemRole" class="system-role-indicator">(Systémová)</span>
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="assignmentGroup.get('roleId')?.hasError('required')">Vyberte rolu.</mat-error>
+      </mat-form-field>
+
+      <!-- Contextual Scope Fields Container -->
+      <div class="scopes-container">
+
+        <!-- Tenant Scope -->
+        <mat-form-field appearance="outline" class="scope-field" *ngIf="isScopeRelevant(i, 'tenant') | async">
+          <mat-label>Firma</mat-label>
+          <mat-select formControlName="scopeTenant">
+            <mat-option value="all">Všetky firmy</mat-option>
+            <mat-option *ngFor="let tenant of allTenants$ | async" [value]="tenant.id">
+              {{ tenant.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Warehouse Scope -->
+        <mat-form-field appearance="outline" class="scope-field" *ngIf="isScopeRelevant(i, 'warehouse') | async">
+          <mat-label>Sklad</mat-label>
+          <mat-select formControlName="scopeWarehouse">
+            <mat-option value="all">Všetky sklady</mat-option>
+            <mat-option *ngFor="let wh of allWarehouses$ | async" [value]="wh.id">
+              {{ wh.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Numeric Range Scope -->
+        <mat-form-field appearance="outline" class="scope-field" *ngIf="isScopeRelevant(i, 'numericRange') | async">
+          <mat-label>Číselný rad</mat-label>
+          <mat-select formControlName="scopeNumericRange">
+            <mat-option value="all">Všetky rady</mat-option>
+            <mat-option *ngFor="let nr of allNumericRanges$ | async" [value]="nr.id">
+              {{ nr.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Own Scope -->
+        <mat-slide-toggle formControlName="scopeOwn" class="scope-field scope-toggle" *ngIf="isScopeRelevant(i, 'own') | async">
+          Len vlastné dáta
+        </mat-slide-toggle>
+
+      </div>
+
+      <!-- Remove Button -->
+      <button mat-icon-button color="warn" type="button" (click)="removeRoleAssignment(i)" matTooltip="Odobrať priradenie" class="remove-button">
+        <mat-icon>remove_circle_outline</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <button mat-stroked-button type="button" (click)="addRoleAssignment()" class="add-assignment-button">
+    <mat-icon>add</mat-icon> Pridať priradenie roly
+  </button>
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="onCancel()">Zrušiť</button>
+  <button mat-flat-button color="primary" (click)="onSave()" [disabled]="!userForm.valid">Uložiť</button>
+</mat-dialog-actions>

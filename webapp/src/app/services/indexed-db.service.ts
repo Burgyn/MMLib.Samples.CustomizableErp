@@ -1,7 +1,11 @@
 import { DBSchema, IDBPDatabase, openDB } from 'idb';
 
 import { Injectable } from '@angular/core';
+import { NumericRange } from '../models/rbac/numeric-range.model'; // Import NumericRange model
 import { Role } from '../models/rbac/role.model'; // Import Role
+import { Tenant } from '../models/rbac/tenant.model'; // Import Tenant model
+import { User } from '../models/rbac/user.model'; // Import User model
+import { Warehouse } from '../models/rbac/warehouse.model'; // Import Warehouse model
 
 // Define the database schema
 interface RbacDB extends DBSchema {
@@ -10,7 +14,19 @@ interface RbacDB extends DBSchema {
     value: Role; // Use the specific Role model
     indexes: { 'name': string };
   };
-  // Add other stores if needed (e.g., users, groups)
+  users: { // Add users store
+    key: string; // User ID (e.g., email or unique identifier)
+    value: User;
+    indexes: { 'email': string, 'name': string };
+  };
+  tenants: { // Add tenants store
+      key: string; // Tenant ID
+      value: Tenant;
+      indexes: { 'name': string };
+  };
+  warehouses: { key: string; value: Warehouse; indexes: { name: string }; }; // Add warehouses store
+  numericRanges: { key: string; value: NumericRange; indexes: { name: string }; }; // Add numericRanges store
+  // Add other stores if needed (e.g., groups)
 }
 
 // Define StoreName type explicitly for clarity and type safety
@@ -21,7 +37,7 @@ export type StoreName = keyof RbacDB;
 })
 export class IndexedDbService {
   private dbName = 'rbac-db';
-  private dbVersion = 1;
+  private dbVersion = 3; // Increment version for schema change
   private dbPromise: Promise<IDBPDatabase<RbacDB>>;
 
   constructor() {
@@ -30,10 +46,35 @@ export class IndexedDbService {
 
   private async openDb(): Promise<IDBPDatabase<RbacDB>> {
     return openDB<RbacDB>(this.dbName, this.dbVersion, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains('roles')) {
-          const store = db.createObjectStore('roles', { keyPath: 'id' });
-          store.createIndex('name', 'name');
+      upgrade(db, oldVersion, newVersion, transaction) {
+        console.log(`Upgrading DB from version ${oldVersion} to ${newVersion}`);
+        // Upgrade logic based on oldVersion
+        if (oldVersion < 1) {
+             if (!db.objectStoreNames.contains('roles')) {
+                const store = db.createObjectStore('roles', { keyPath: 'id' });
+                store.createIndex('name', 'name');
+            }
+        }
+         if (oldVersion < 2) {
+             if (!db.objectStoreNames.contains('users')) {
+                const store = db.createObjectStore('users', { keyPath: 'id' });
+                store.createIndex('email', 'email', { unique: true });
+                store.createIndex('name', 'name');
+            }
+            if (!db.objectStoreNames.contains('tenants')) {
+                const store = db.createObjectStore('tenants', { keyPath: 'id' });
+                store.createIndex('name', 'name');
+            }
+        }
+         if (oldVersion < 3) {
+            if (!db.objectStoreNames.contains('warehouses')) {
+                const store = db.createObjectStore('warehouses', { keyPath: 'id' });
+                store.createIndex('name', 'name');
+            }
+             if (!db.objectStoreNames.contains('numericRanges')) {
+                const store = db.createObjectStore('numericRanges', { keyPath: 'id' });
+                store.createIndex('name', 'name');
+            }
         }
         // Add upgrades for future versions here
       },
