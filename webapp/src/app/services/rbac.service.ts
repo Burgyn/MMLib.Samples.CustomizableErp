@@ -154,17 +154,20 @@ export class RbacService {
     {
         id: 'group_kros_all', name: 'Všetci KROS', description: 'Všetci používatelia z KROS',
         memberUserIds: ['admin@kros.sk', 'uctovnik@kros.sk'],
-        memberGroupIds: []
+        memberGroupIds: [],
+        roleAssignments: []
     },
     {
         id: 'group_managers', name: 'Manažéri', description: 'Skupina manažérov',
         memberUserIds: ['manager@burgyn.sk'],
-        memberGroupIds: []
+        memberGroupIds: [],
+        roleAssignments: []
     },
     {
         id: 'group_nested_example', name: 'Príklad vnorenej', description: '',
         memberUserIds: [],
-        memberGroupIds: ['group_managers'] // Contains the Managers group
+        memberGroupIds: ['group_managers'], // Contains the Managers group
+        roleAssignments: []
     }
   ];
 

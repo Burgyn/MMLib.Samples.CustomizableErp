@@ -36,6 +36,74 @@
     </mat-select>
   </mat-form-field>
 
+  <mat-divider></mat-divider>
+
+  <!-- Role Assignments for Group -->
+  <h3 class="assignments-title">Priradenie rolí a rozsahov</h3>
+  <mat-accordion multi="true">
+    <div formArrayName="roleAssignments">
+      <mat-expansion-panel *ngFor="let assignmentGroup of roleAssignmentsFormArray.controls; let i = index" [formGroupName]="i" class="assignment-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+             {{ getRoleNameForAssignment(i) }}
+          </mat-panel-title>
+          <mat-panel-description></mat-panel-description>
+          <button mat-icon-button color="warn" type="button"
+                  (click)="removeRoleAssignment(i); $event.stopPropagation();"
+                  matTooltip="Odobrať priradenie">
+              <mat-icon>delete_forever</mat-icon>
+          </button>
+        </mat-expansion-panel-header>
+
+        <div class="assignment-content">
+          <mat-form-field appearance="outline" class="role-select-in-panel">
+              <mat-label>Vybraná rola</mat-label>
+              <mat-select formControlName="roleId" required>
+              <mat-option *ngFor="let role of allRoles$ | async" [value]="role.id">
+                  {{ role.name }} <span *ngIf="role.isSystemRole" class="system-role-indicator">(Systémová)</span>
+              </mat-option>
+              </mat-select>
+              <mat-error *ngIf="assignmentGroup.get('roleId')?.hasError('required')">Vyberte rolu.</mat-error>
+          </mat-form-field>
+
+          <div class="scope-details-section" *ngIf="assignmentGroup.get('roleId')?.value">
+              <h4>Rozsah platnosti</h4>
+              <div class="scope-fields-grid">
+                  <mat-form-field appearance="outline" *ngIf="isScopeRelevant(i, 'tenant') | async">
+                      <mat-label>Firma</mat-label>
+                      <mat-select formControlName="scopeTenant">
+                      <mat-option value="all">Všetky firmy</mat-option>
+                      <mat-option *ngFor="let tenant of allTenants$ | async" [value]="tenant.id">{{ tenant.name }}</mat-option>
+                      </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" *ngIf="isScopeRelevant(i, 'warehouse') | async">
+                      <mat-label>Sklad</mat-label>
+                      <mat-select formControlName="scopeWarehouse">
+                      <mat-option value="all">Všetky sklady</mat-option>
+                      <mat-option *ngFor="let wh of allWarehouses$ | async" [value]="wh.id">{{ wh.name }}</mat-option>
+                      </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" *ngIf="isScopeRelevant(i, 'numericRange') | async">
+                      <mat-label>Číselný rad</mat-label>
+                      <mat-select formControlName="scopeNumericRange">
+                      <mat-option value="all">Všetky rady</mat-option>
+                      <mat-option *ngFor="let nr of allNumericRanges$ | async" [value]="nr.id">{{ nr.name }}</mat-option>
+                      </mat-select>
+                  </mat-form-field>
+                  <div class="scope-toggle-container" *ngIf="isScopeRelevant(i, 'own') | async">
+                      <mat-slide-toggle formControlName="scopeOwn">Len vlastné dáta</mat-slide-toggle>
+                  </div>
+              </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </div>
+  </mat-accordion>
+
+  <button mat-stroked-button type="button" (click)="addRoleAssignment()" class="add-assignment-button">
+    <mat-icon>add</mat-icon> Pridať priradenie roly
+  </button>
+
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
